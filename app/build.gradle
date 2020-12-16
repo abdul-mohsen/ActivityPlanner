@@ -4,6 +4,10 @@ plugins {
     id "kotlin-kapt"
 }
 
+def PropertiesFile = rootProject.file("local.properties")
+def Properties = new Properties()
+Properties.load(new FileInputStream(PropertiesFile))
+
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.2"
@@ -16,6 +20,7 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "YELP_API_KEY", Properties['YELP_API_KEY'] ?: "?")
     }
 
     buildTypes {
