@@ -5,20 +5,22 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import timber.log.Timber
 
 object WebClient {
 
-    private const val YELP_BASE_URL = "https://api.yelp.com/v3"
-    private const val WEATHER_BASE_URL = "http://api.weatherapi.com/v1"
+    private const val YELP_BASE_URL = "https://api.yelp.com/v3/"
+    private const val WEATHER_BASE_URL = "http://api.weatherapi.com/v1/"
     private const val YELP_API_KEY = BuildConfig.YELP_API_KEY
 
     private val yelpInterceptor = Interceptor{ chain ->
         chain.proceed(
             chain.request().newBuilder().addHeader("Authorization", "Bearer $YELP_API_KEY")
                 .url(
-                    chain.request().url.newBuilder().build()
+                    chain.request().url.newBuilder()
+                        .build()
                 ).build()
-        )
+        ).apply { Timber.d( this.request.toString() ) }
     }
 
     private val weatherInterceptor = Interceptor{ chain ->

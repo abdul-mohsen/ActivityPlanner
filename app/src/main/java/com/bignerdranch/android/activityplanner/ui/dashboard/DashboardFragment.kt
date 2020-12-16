@@ -139,8 +139,4 @@ class DashboardFragment : Fragment() , OnMapReadyCallback, PermissionsListener {
         mapView.onDestroy()
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        mapView.onDestroy()
-    }
 }

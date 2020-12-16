@@ -14,19 +14,21 @@ object Repository {
 
     @FlowPreview
     suspend fun getBusinesses(
+        term: String,
         latitude: Double,
         longitude: Double,
-        pageCount: Int,
+        pageCount: Int = 1,
         pageSize: Int = 20
-    ): Flow<List<String>> = (1..pageCount).asFlow().flatMapMerge(concurrency = 4) { page ->
+    ): Flow<List<String>> = (0 until pageCount).asFlow().flatMapMerge(concurrency = 4) { page ->
         flow {
             val businessesSearchRespnse = webClient.yelpAPI.searchBusinesses(
+                term = term,
                 latitude = latitude,
                 longitude = longitude,
                 limit = pageSize,
                 offset = page*pageSize
             )
-            Timber.d(businessesSearchRespnse)
+            Timber.d(businessesSearchRespnse.toString())
             emit(emptyList<String>())
         }
     }.retry(1) { e ->
