@@ -1,6 +1,7 @@
-package com.bignerdranch.android.activityplanner
+package com.bignerdranch.android.activityplanner.Repo
 
-import com.bignerdranch.android.activityplanner.flickrAPI.WebClient
+import com.bignerdranch.android.activityplanner.APIs.WebClient
+import com.bignerdranch.android.activityplanner.model.Business
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -8,8 +9,8 @@ import kotlinx.coroutines.flow.*
 import timber.log.Timber
 import java.lang.Exception
 
-object Repository {
-    private val webClient = WebClient
+object BusinessRepository {
+    private val webClient = WebClient.yelpAPI
     private val dispatcher = Dispatchers.IO
 
     @FlowPreview
@@ -19,17 +20,17 @@ object Repository {
         longitude: Double,
         pageCount: Int = 1,
         pageSize: Int = 20
-    ): Flow<List<String>> = (0 until pageCount).asFlow().flatMapMerge(concurrency = 4) { page ->
+    ): Flow<List<Business>> = (0 until pageCount).asFlow().flatMapMerge(concurrency = 4) { page ->
         flow {
-            val businessesSearchRespnse = webClient.yelpAPI.searchBusinesses(
+            val businessList = webClient.searchBusinesses(
                 term = term,
                 latitude = latitude,
                 longitude = longitude,
                 limit = pageSize,
                 offset = page*pageSize
-            )
-            Timber.d(businessesSearchRespnse.toString())
-            emit(emptyList<String>())
+            ).toList()
+            Timber.d("Got a response with a list of size ${businessList.size}")
+            emit(businessList)
         }
     }.retry(1) { e ->
         (e is Exception).also { if (it) delay(1000) }

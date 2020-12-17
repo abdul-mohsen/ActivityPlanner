@@ -1,6 +1,6 @@
-package com.bignerdranch.android.activityplanner.flickrAPI
+package com.bignerdranch.android.activityplanner.APIs
 
-import com.bignerdranch.android.activityplanner.model.Businesses
+import com.bignerdranch.android.activityplanner.model.Business
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -21,5 +21,5 @@ interface YelpAPI {
         @Query("open_at") openAt: String = "",
         @Query("attributes") attributes: String = "reservation" +
                 "waitlist_reservation, open_to_all, wheelchair_accessible"
-    ): Businesses
+    ): Array<Business>
 }

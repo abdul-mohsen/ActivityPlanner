@@ -2,7 +2,6 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id "kotlin-kapt"
-    id 'kotlin-android-extensions'
 }
 
 def PropertiesFile = rootProject.file("local.properties")
@@ -22,6 +21,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "YELP_API_KEY", Properties['YELP_API_KEY'] ?: "?")
+        buildConfigField("String", "WEATHER_API_KEY", Properties['WEATHER_API_KEY'] ?: "?")
     }
 
     buildTypes {
