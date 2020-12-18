@@ -55,7 +55,7 @@ class HomeFragment : Fragment() {
                 Timber.d("$state")
                 when (state) {
                     WeatherDataState.Idle -> Timber.d("___")
-                    WeatherDataState.NewData -> WeatherDataState.Idle
+                    WeatherDataState.NewData -> homeViewModel.updateWeatherDataState(WeatherDataState.Idle)
                 }
             }
         }
