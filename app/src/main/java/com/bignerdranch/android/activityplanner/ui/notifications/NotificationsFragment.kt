@@ -32,16 +32,9 @@ class NotificationsFragment : Fragment() {
         notificationsViewModel.text.observe(viewLifecycleOwner, Observer {
             binding.textNotifications.text = it
         })
-        notificationsViewModel.loadWeather()
         Timber.d("We are here")
         return binding.root
     }
 
-    fun observeWeather(){
-        lifecycle.coroutineScope.launchWhenStarted {
-            notificationsViewModel.busList.collect { list ->
-                Timber.d("Some change")
-            }
-        }
-    }
+
 }

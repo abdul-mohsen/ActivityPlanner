@@ -19,21 +19,4 @@ class NotificationsViewModel : ViewModel() {
         value = "This is notifications Fragment"
     }
     val text: LiveData<String> = _text
-    private val _busList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
-    val busList:StateFlow<List<Business>> = _busList
-
-
-    @FlowPreview
-    fun loadWeather(){
-        viewModelScope.launch {
-            WeatherRepository.getWeather(
-                listOf(48.8567 to 2.3508),
-                id = "1"
-            ).collect{ mapItem ->
-                Timber.d("${mapItem.first} ${mapItem.second}")
-                }
-        }
-    }
-
-
 }

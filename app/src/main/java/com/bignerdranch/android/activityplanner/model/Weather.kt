@@ -3,7 +3,8 @@ package com.bignerdranch.android.activityplanner.model
 import com.google.gson.annotations.SerializedName
 
 data class Weather(
-    val time_epoch: Int,
+    @SerializedName("time_epoch")
+    val timeEpoch: Int,
     @SerializedName("temp_c")
     var tempC: Float,
     @SerializedName("is_day")

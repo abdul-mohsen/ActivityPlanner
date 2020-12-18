@@ -1,6 +1,7 @@
 package com.bignerdranch.android.activityplanner.Repo
 
 import com.bignerdranch.android.activityplanner.APIs.WebClient
+import com.bignerdranch.android.activityplanner.model.Business
 import com.bignerdranch.android.activityplanner.model.Weather
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -18,15 +19,14 @@ object WeatherRepository {
 
     @FlowPreview
     suspend fun getWeather(
-        locationList :List<Pair<Double, Double>>,
-        id: String
-    ): Flow<weatherUnion> = locationList.asFlow().flatMapMerge(concurrency = 4) { location ->
+        businessList :List<Business>
+    ): Flow<weatherUnion> = businessList.asFlow().flatMapMerge(concurrency = 4) { business ->
         flow {
             val weatherList = webClient.getWeatherAtLocation(
-                query= "${location.first},${location.second}"
+                query= "${business.coordinates.latitude},${business.coordinates.longitude}"
             ).toList()
             Timber.d("Got a response with a list of size ${weatherList.size}")
-            emit(id to weatherList)
+            emit(business.id to weatherList)
         }
     }.retry(1) { e ->
         (e is Exception).also { if (it) delay(1000) }
