@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
 import com.bignerdranch.android.activityplanner.Repo.WeatherRepository
+import com.bignerdranch.android.activityplanner.model.AutoComplete
 import com.bignerdranch.android.activityplanner.model.Business
 import com.bignerdranch.android.activityplanner.model.WeatherDataState
 import kotlinx.coroutines.FlowPreview
@@ -27,6 +28,9 @@ class HomeViewModel : ViewModel() {
 
     private val _weatherDataState: MutableStateFlow<WeatherDataState> = MutableStateFlow(WeatherDataState.Idle)
     val weatherDataState: StateFlow<WeatherDataState> = _weatherDataState
+
+    private val _autoCompleteFlow: MutableStateFlow<AutoComplete> = MutableStateFlow(AutoComplete())
+    val autoCompleteFlow: StateFlow<AutoComplete> = _autoCompleteFlow
 
     @FlowPreview
     fun loadNewData(){
@@ -59,20 +63,25 @@ class HomeViewModel : ViewModel() {
     }
 
     @FlowPreview
-    fun autoComplete() {
+    fun autoComplete(input: String) {
         viewModelScope.launch {
             Timber.d("This is a test stay a way")
             BusinessRepository.autoComplete(
-                text = "new",
+                text = input,
                 latitude = 37.786882,
                 longitude = -122.399972
             ).collect { autoComplete ->
-                autoComplete.apply {
-                    Timber.d("$categories ____$businesses  __ $terms")
-                }
+                _autoCompleteFlow.emit(autoComplete)
             }
         }
     }
+
+    fun getListOfAutoComplete(autoComplete: AutoComplete): List<String> = autoComplete
+        .run {  mutableListOf<String>().apply {
+            addAll(businesses)
+            addAll(terms)
+            addAll(categories)
+        } }
 
     suspend fun updateWeatherDataState(state: WeatherDataState) {
         _weatherDataState.emit(state)

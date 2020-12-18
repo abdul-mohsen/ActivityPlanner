@@ -23,7 +23,7 @@ object WeatherRepository {
     ): Flow<weatherUnion> = businessList.asFlow().flatMapMerge(concurrency = 4) { business ->
         flow {
             val weatherList = webClient.getWeatherAtLocation(
-                query= "${business.coordinates.latitude},${business.coordinates.longitude}"
+                query = "${business.coordinates.latitude},${business.coordinates.longitude}"
             ).toList()
             Timber.d("Got a response with a list of size ${weatherList.size}")
             emit(business.id to weatherList)

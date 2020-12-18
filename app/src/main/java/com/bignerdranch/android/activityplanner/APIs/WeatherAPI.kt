@@ -11,6 +11,6 @@ interface WeatherAPI {
         @Query("key") key: String = "",
         @Query("q") query: String = "",
         @Query("hour") hour: String = "",
-        @Query("days") term: String = "1"
+        @Query("dt") startDate: String = ""
     ): Array<Weather>
 }
