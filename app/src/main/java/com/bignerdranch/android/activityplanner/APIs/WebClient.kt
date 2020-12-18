@@ -1,6 +1,7 @@
 package com.bignerdranch.android.activityplanner.APIs
 
 import com.bignerdranch.android.activityplanner.BuildConfig
+import com.bignerdranch.android.activityplanner.model.AutoComplete
 import com.bignerdranch.android.activityplanner.model.Business
 import com.bignerdranch.android.activityplanner.model.Weather
 import com.google.gson.Gson
@@ -20,7 +21,7 @@ object WebClient {
     private const val YELP_API_KEY = BuildConfig.YELP_API_KEY
     private const val WEATHER_API_KEY = BuildConfig.WEATHER_API_KEY
 
-    private val yelpDeserializer = JsonDeserializer { json, _, _ ->
+    private val yelpBusinessDeserializer = JsonDeserializer { json, _, _ ->
         json as JsonObject
         val longList = json.getAsJsonArray("businesses")
         Gson().fromJson(longList, Array<Business>::class.java).apply {
@@ -31,13 +32,37 @@ object WebClient {
         }
     }
 
+    private val yelpAutoCompleteDeserializer = JsonDeserializer { json, _, _ ->
+        json as JsonObject
+        val autoComplete = AutoComplete()
+        val temp: MutableList<String> = mutableListOf()
+        for (item in json.getAsJsonArray("categories")) {
+            item as JsonObject
+            temp.add(item.get("title").asString)
+        }
+        autoComplete.categories = temp
+        temp.clear()
+        for (item in json.getAsJsonArray("businesses")) {
+            item as JsonObject
+            temp.add(item.get("name").asString)
+        }
+        autoComplete.businesses = temp
+        temp.clear()
+        for (item in json.getAsJsonArray("terms")) {
+            item as JsonObject
+            temp.add(item.get("text").asString)
+        }
+        autoComplete.terms = temp
+
+        autoComplete
+    }
+
     private val weatherDeserializer = JsonDeserializer { json, _, _ ->
         json as JsonObject
         val forecast = json.get("forecast") as JsonObject
         val forecastday = forecast.getAsJsonArray("forecastday")
         val list: MutableList<Weather> = mutableListOf()
         for (item in forecastday) {
-            print(forecastday.size())
             val hours = (item as JsonObject).getAsJsonArray("hour")
             list.addAll(Gson().fromJson(hours, Array<Weather>::class.java).toList().apply {
                 println(this)
@@ -68,7 +93,10 @@ object WebClient {
 
     val yelpAPI: YelpAPI = Retrofit.Builder().baseUrl(YELP_BASE_URL)
         .addConverterFactory(GsonConverterFactory.create(
-            GsonBuilder().registerTypeAdapter(Array<Business>::class.java, yelpDeserializer).create()
+            GsonBuilder()
+                .registerTypeAdapter(Array<Business>::class.java, yelpBusinessDeserializer)
+                .registerTypeAdapter(AutoComplete::class.java, yelpAutoCompleteDeserializer)
+                .create()
         ))
         .client(OkHttpClient.Builder().addInterceptor(yelpInterceptor).build())
         .build()

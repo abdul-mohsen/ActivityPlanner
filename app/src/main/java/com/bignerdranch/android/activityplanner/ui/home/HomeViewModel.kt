@@ -58,6 +58,22 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    @FlowPreview
+    fun autoComplete() {
+        viewModelScope.launch {
+            Timber.d("This is a test stay a way")
+            BusinessRepository.autoComplete(
+                text = "new",
+                latitude = 37.786882,
+                longitude = -122.399972
+            ).collect { autoComplete ->
+                autoComplete.apply {
+                    Timber.d("$categories ____$businesses  __ $terms")
+                }
+            }
+        }
+    }
+
     suspend fun updateWeatherDataState(state: WeatherDataState) {
         _weatherDataState.emit(state)
     }

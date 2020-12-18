@@ -1,5 +1,6 @@
 package com.bignerdranch.android.activityplanner.APIs
 
+import com.bignerdranch.android.activityplanner.model.AutoComplete
 import com.bignerdranch.android.activityplanner.model.Business
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -27,7 +28,7 @@ interface YelpAPI {
         @Query("text") text: String,
         @Query("latitude") latitude: Double = newYorkLocation.latitude,
         @Query("longitude") longitude: Double = newYorkLocation.longitude,
-    )
+    ): AutoComplete
 
     companion object {
         private const val radius = 15000

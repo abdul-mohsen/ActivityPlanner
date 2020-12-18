@@ -29,10 +29,11 @@ class HomeFragment : Fragment() {
         homeViewModel.text.observe(viewLifecycleOwner, {
             binding.textHome.text = it
         })
+        homeViewModel.autoComplete()
 
-        observeBusinessList()
-        observeWeatherDataState()
-        homeViewModel.loadNewData()
+//        observeBusinessList()
+//        observeWeatherDataState()
+//        homeViewModel.loadNewData()
 
         return binding.root
     }
