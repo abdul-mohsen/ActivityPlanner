@@ -27,6 +27,7 @@ object WebClient {
         Gson().fromJson(longList, Array<Business>::class.java).apply {
             Timber.d("$this")
             for (item in this) {
+                Timber.d("${item.categories}")
                 item.weatherTimeMap = mutableMapOf()
             }
         }

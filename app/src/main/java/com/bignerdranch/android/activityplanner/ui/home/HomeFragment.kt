@@ -30,6 +30,7 @@ class HomeFragment : Fragment() {
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View {
+        Timber.d("I have been created")
         homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
         binding = FragmentHomeBinding.inflate(inflater, container, false)
 
@@ -41,7 +42,6 @@ class HomeFragment : Fragment() {
                     Timber.d("Testing the delay")
                     homeViewModel.autoComplete(binding.businessSearch.text.toString())
                 }
-
             }
         )
 
@@ -50,8 +50,9 @@ class HomeFragment : Fragment() {
         }
 //        observeBusinessList()
 //        observeWeatherDataState()
-//        homeViewModel.loadNewData()
+        homeViewModel.loadNewData()
         observeAutoCompleteList()
+        observeAllBusinesses()
 
         return binding.root
     }
@@ -90,6 +91,17 @@ class HomeFragment : Fragment() {
                         getListOfAutoComplete(autoComplete)
                     ))
                 }
+            }
+        }
+    }
+
+    private fun observeAllBusinesses() {
+        lifecycle.coroutineScope.launchWhenStarted {
+            homeViewModel.getAllBusiness().collect { list ->
+                list.forEach {
+                    Timber.d("Cat = ${it.categories}")
+                }
+                Timber.d("Data base list  = $list")
             }
         }
     }

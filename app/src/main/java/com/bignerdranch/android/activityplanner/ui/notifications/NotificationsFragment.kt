@@ -29,7 +29,7 @@ class NotificationsFragment : Fragment() {
         notificationsViewModel =
                 ViewModelProvider(this).get(NotificationsViewModel::class.java)
         binding = FragmentNotificationsBinding.inflate(layoutInflater, container, false)
-        notificationsViewModel.text.observe(viewLifecycleOwner, Observer {
+        notificationsViewModel.text.observe(viewLifecycleOwner, {
             binding.textNotifications.text = it
         })
         Timber.d("We are here")

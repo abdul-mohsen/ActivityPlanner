@@ -1,12 +1,19 @@
 package com.bignerdranch.android.activityplanner
 
 import android.app.Application
+import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
+import com.bignerdranch.android.activityplanner.database.AppDatabase
 import timber.log.Timber
 
 class App: Application() {
     override fun onCreate() {
-        super.onCreate()
         if (BuildConfig.DEBUG)
             Timber.plant(Timber.DebugTree())
+        AppDatabase.invoke(this).also {
+            BusinessRepository.businessDao = it.businessDao()
+            BusinessRepository.categoryDao = it.categoryDao()
+            BusinessRepository.businessCategoriesDao = it.businessWithCategoriesDao()
+        }
+        super.onCreate()
     }
 }

@@ -1,20 +1,84 @@
 package com.bignerdranch.android.activityplanner.Repo
 
 import com.bignerdranch.android.activityplanner.APIs.WebClient
-import com.bignerdranch.android.activityplanner.APIs.YelpAPI
-import com.bignerdranch.android.activityplanner.model.AutoComplete
-import com.bignerdranch.android.activityplanner.model.Business
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
+import com.bignerdranch.android.activityplanner.database.BusinessDao
+import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
+import com.bignerdranch.android.activityplanner.database.CategoryDao
+import com.bignerdranch.android.activityplanner.model.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import retrofit2.http.Query
 import timber.log.Timber
 import java.lang.Exception
 
 object BusinessRepository {
     private val webClient = WebClient.yelpAPI
+    lateinit var businessDao: BusinessDao
+    lateinit var categoryDao: CategoryDao
+    lateinit var businessCategoriesDao: BusinessCategoriesDao
     private val dispatcher = Dispatchers.IO
+
+    val allBusiness by lazy { flow{
+        businessDao.getAll().collect {list ->
+            emit( list.map { business ->
+                    getFullBusinessInfo(businessCategoriesDao.getByBusinessId(business.id))
+            })
+        }
+    }.flowOn(dispatcher) }
+    val allBusiness2 by lazy { businessCategoriesDao.getAll() }
+    val allBusiness3 by lazy { flow {
+        businessCategoriesDao.getAll().collect { businessWithCategories ->
+            emit(businessWithCategories.map { getFullBusinessInfo(it) })
+        }
+    }.flowOn(dispatcher) }
+
+    private suspend fun getFullBusinessInfo(businessWithCategories: BusinessWithCategories): Business =
+        businessWithCategories.business.also { business ->
+            Timber.d("$business  __  ${businessWithCategories.categories}")
+            business.categories = categoryDao.getById(
+                *businessWithCategories.categories.map { it.categoryId }
+            )
+        }
+
+    private suspend fun insertWithCategories(businesses: List<Business>) {
+        val businessCategory: MutableSet<BusinessCategory> = mutableSetOf()
+        val categories: MutableSet<Category> = mutableSetOf()
+        businesses.forEach { business ->
+            business.categories.forEach { category ->
+                categories.add(category)
+            }
+        }
+        categoryDao.insert(*categories.toTypedArray())
+        val uniqueCategories = categoryDao.getAll()
+
+        businesses.forEach { business ->
+            business.categories.forEach { category ->
+                uniqueCategories.first { it.name == category.name }.also {
+                    businessCategory.add(BusinessCategory(
+                        businessId = business.id,
+                        categoryId = it.id
+                    ))
+                }
+            }
+        }
+        businessCategoriesDao.insert(*businessCategory.toTypedArray())
+    }
+
+    suspend fun insert(business: List<Business>) {
+        businessDao.insert(*business.toTypedArray())
+        insertWithCategories(business)
+    }
+
+    suspend fun deleteAll() {
+        businessDao.deleteAll()
+    }
+
+    suspend fun delete(vararg business: Business) {
+        businessDao.delete(*business)
+    }
+
+    suspend fun update(vararg business: Business) {
+        businessDao.update(*business)
+    }
 
     @FlowPreview
     suspend fun getBusinesses(
@@ -58,4 +122,5 @@ object BusinessRepository {
     }.catch { e ->
         Timber.d(e.toString())
     }.flowOn(dispatcher)
+
 }

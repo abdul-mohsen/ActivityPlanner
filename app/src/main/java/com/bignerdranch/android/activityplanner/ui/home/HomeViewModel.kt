@@ -1,7 +1,5 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
@@ -13,15 +11,13 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class HomeViewModel : ViewModel() {
-    private val _text = MutableLiveData<String>().apply {
-        value = "This is home Fragment"
-    }
-    val text: LiveData<String> = _text
 
+    suspend fun getAllBusiness() = BusinessRepository.allBusiness.stateIn(viewModelScope)
 
     private val _businessList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
     val businessList: StateFlow<List<Business>> = _businessList
@@ -35,6 +31,7 @@ class HomeViewModel : ViewModel() {
     @FlowPreview
     fun loadNewData(){
         viewModelScope.launch {
+            BusinessRepository.deleteAll()
             val tempBusinessList = mutableListOf<Business>()
             BusinessRepository.getBusinesses(
                 term = "",
@@ -44,6 +41,7 @@ class HomeViewModel : ViewModel() {
                 tempBusinessList.addAll(list)
             }
             Timber.d("A new list have been loaded $tempBusinessList")
+            BusinessRepository.insert(tempBusinessList)
             _businessList.emit(tempBusinessList)
         }
     }
