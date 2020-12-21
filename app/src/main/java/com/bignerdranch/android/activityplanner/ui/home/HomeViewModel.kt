@@ -47,13 +47,13 @@ class HomeViewModel : ViewModel() {
     }
 
     @FlowPreview
-    fun loadWeather(list: List<Business>) {
+    suspend fun loadWeather(list: List<Business>) {
         viewModelScope.launch {
             Timber.d("$list")
-            WeatherRepository.getWeather(list).collect{ mapItem ->
-                Timber.d("${mapItem.first} ${mapItem.second}")
-                _businessList.value.first { it.id == mapItem.first }
-                    .weatherTimeMap.putAll(mapItem.second.map { it.timeEpoch to it }.toMap())
+            WeatherRepository.getWeather(list).collect{ list ->
+                _businessList.value.first()
+                _businessList.value.first { it.id == list.first().businessId }
+                    .weatherTimeMap.putAll(list.map { it.timeEpoch to it }.toMap())
                 Timber.d("new Weather data")
                 _weatherDataState.emit(WeatherDataState.NewData)
             }

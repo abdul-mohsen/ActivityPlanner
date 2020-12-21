@@ -1,6 +1,9 @@
 package com.bignerdranch.android.activityplanner.Repo
 
 import com.bignerdranch.android.activityplanner.APIs.WebClient
+import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
+import com.bignerdranch.android.activityplanner.database.BusinessWeathersDao
+import com.bignerdranch.android.activityplanner.database.WeatherDao
 import com.bignerdranch.android.activityplanner.model.Business
 import com.bignerdranch.android.activityplanner.model.Weather
 import kotlinx.coroutines.Dispatchers
@@ -10,23 +13,33 @@ import kotlinx.coroutines.flow.*
 import timber.log.Timber
 import java.lang.Exception
 
-// make the id of the location with the List of weather
-typealias weatherUnion = Pair<String, List<Weather>>
-
 object WeatherRepository {
     private val webClient = WebClient.weatherAPI
     private val dispatcher = Dispatchers.IO
+    lateinit var weatherDao:  WeatherDao
+    lateinit var businessWeatherDao: BusinessWeathersDao
+
 
     @FlowPreview
     suspend fun getWeather(
         businessList :List<Business>
-    ): Flow<weatherUnion> = businessList.asFlow().flatMapMerge(concurrency = 4) { business ->
+    ): Flow<List<Weather>> = businessList.asFlow().flatMapMerge(concurrency = 4) { business ->
         flow {
-            val weatherList = webClient.getWeatherAtLocation(
-                query = "${business.coordinates.latitude},${business.coordinates.longitude}"
-            ).toList()
+
+            val dbWeatherList = businessWeatherDao.getByBusinessId(business.id).weathers.also {
+                it.map { weather -> weather.businessId = business.id }
+            }
+
+            val weatherList: List<Weather> =
+                if (dbWeatherList.isNotEmpty()) dbWeatherList
+                else webClient.getWeatherAtLocation(
+                    query = "${business.coordinates.latitude},${business.coordinates.longitude}"
+                ).toList().also { list ->
+                    list.map { weather -> weather.businessId = business.id }
+                    weatherDao.insert(*list.toTypedArray())
+                }
             Timber.d("Got a response with a list of size ${weatherList.size}")
-            emit(business.id to weatherList)
+            emit(weatherList)
         }
     }.retry(1) { e ->
         (e is Exception).also { if (it) delay(1000) }

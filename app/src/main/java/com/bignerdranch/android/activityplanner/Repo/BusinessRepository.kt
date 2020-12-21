@@ -3,6 +3,7 @@ package com.bignerdranch.android.activityplanner.Repo
 import com.bignerdranch.android.activityplanner.APIs.WebClient
 import com.bignerdranch.android.activityplanner.database.BusinessDao
 import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
+import com.bignerdranch.android.activityplanner.database.BusinessWeathersDao
 import com.bignerdranch.android.activityplanner.database.CategoryDao
 import com.bignerdranch.android.activityplanner.model.*
 import kotlinx.coroutines.*
@@ -24,6 +25,7 @@ object BusinessRepository {
             })
         }
     }.flowOn(dispatcher) }
+
     val allBusiness2 by lazy { businessCategoriesDao.getAll() }
     val allBusiness3 by lazy { flow {
         businessCategoriesDao.getAll().collect { businessWithCategories ->

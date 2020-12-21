@@ -4,17 +4,19 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.bignerdranch.android.activityplanner.model.Business
-import com.bignerdranch.android.activityplanner.model.BusinessCategory
-import com.bignerdranch.android.activityplanner.model.Category
+import com.bignerdranch.android.activityplanner.model.*
 
-@Database(entities = [Business::class, Category::class, BusinessCategory::class], version = 1, exportSchema = false)
-@TypeConverters(AppTypeConverters::class)
+@Database(entities =
+[Business::class, Category::class, BusinessCategory::class,Weather::class],
+    version = 1,
+    exportSchema = false
+)
 abstract class AppDatabase: RoomDatabase() {
     abstract fun businessDao(): BusinessDao
     abstract fun categoryDao(): CategoryDao
+    abstract fun weatherDao(): WeatherDao
     abstract fun businessWithCategoriesDao(): BusinessCategoriesDao
+    abstract fun businessWeatherDao(): BusinessWeathersDao
 
     companion object {
         private const val DATABASE_NAME = "database"

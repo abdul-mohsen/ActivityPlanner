@@ -1,8 +1,12 @@
 package com.bignerdranch.android.activityplanner.database
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Update
+import androidx.room.Insert
+import androidx.room.Delete
+import androidx.room.OnConflictStrategy
 import com.bignerdranch.android.activityplanner.model.Business
-import com.bignerdranch.android.activityplanner.model.Category
 import kotlinx.coroutines.flow.Flow
 
 @Dao

@@ -13,19 +13,20 @@ data class Business(
         @SerializedName("review_count")
         var reviewCount: Int,
         var rating: Float,
-        var distance: Float
+
+        var url: String
     ) {
     lateinit var name: String
     lateinit var alias: String
-    lateinit var url: String
     lateinit var phone: String
     lateinit var price: String
-    @Ignore
-    lateinit var categories: List<Category>
+
     @Embedded
     lateinit var coordinates: Coordinates
     @Ignore
     lateinit var weatherTimeMap : MutableMap<Int, Weather>
+    @Ignore
+    lateinit var categories: List<Category>
 
     data class Coordinates(val latitude: Double, val longitude: Double)
 }

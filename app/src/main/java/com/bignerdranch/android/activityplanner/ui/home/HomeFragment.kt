@@ -48,7 +48,7 @@ class HomeFragment : Fragment() {
         binding.businessSearch.setOnItemClickListener { _, _, _, _ ->
             Timber.d("Yay you found what you want to search")
         }
-//        observeBusinessList()
+        observeBusinessList()
 //        observeWeatherDataState()
         homeViewModel.loadNewData()
         observeAutoCompleteList()
