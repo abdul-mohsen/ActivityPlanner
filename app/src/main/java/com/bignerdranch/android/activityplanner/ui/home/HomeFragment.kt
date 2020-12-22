@@ -23,7 +23,6 @@ import okhttp3.internal.notifyAll
 import timber.log.Timber
 
 class HomeFragment : Fragment() {
-
     private lateinit var homeViewModel: HomeViewModel
     private lateinit var binding: FragmentHomeBinding
     private lateinit var arrayAdapter: MyArrayAdapter
@@ -64,9 +63,7 @@ class HomeFragment : Fragment() {
         }
         observeBusinessList()
         observeWeatherDataState()
-        homeViewModel.loadNewData()
         observeAutoCompleteList()
-        observeAllBusinesses()
         return binding.root
     }
 
@@ -100,22 +97,10 @@ class HomeFragment : Fragment() {
                 autoCompleteFlow.collect { autoComplete ->
                     val autoList = getListOfAutoComplete(autoComplete).toMutableList()
                     Timber.d("my auto list $autoList")
-//                    val list = if (autoList.isEmpty()) homeViewModel.getAllSearchHistory()
                      arrayAdapter.submit(
                          autoList
                      )
                 }
-            }
-        }
-    }
-
-    private fun observeAllBusinesses() {
-        lifecycle.coroutineScope.launchWhenStarted {
-            homeViewModel.getAllBusiness().collect { list ->
-                list.forEach {
-                    Timber.d("Cat = ${it.categories}")
-                }
-                Timber.d("Data base list  = $list")
             }
         }
     }

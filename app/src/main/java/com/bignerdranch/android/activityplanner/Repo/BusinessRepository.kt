@@ -18,23 +18,19 @@ object BusinessRepository {
     lateinit var businessCategoriesDao: BusinessCategoriesDao
     private val dispatcher = Dispatchers.IO
 
-    val allBusiness by lazy { flow{
-        businessDao.getAll().collect {list ->
-            emit( list.map { business ->
-                    getFullBusinessInfo(businessCategoriesDao.getByBusinessId(business.id))
-            })
-        }
-    }.flowOn(dispatcher) }
+    val allBusiness2 by lazy { businessDao.getAll() }
+//    val allBusiness by lazy { flow{
+//        businessDao.getAll().collect {list ->
+//            emit( list.map { business ->
+//                Timber.d("$business")
+//                getFullBusinessInfo(businessCategoriesDao.getByBusinessId(business.id))
+//            })
+//        }
+//    }.flowOn(dispatcher) }
 
-    val allBusiness2 by lazy { businessCategoriesDao.getAll() }
-    val allBusiness3 by lazy { flow {
-        businessCategoriesDao.getAll().collect { businessWithCategories ->
-            emit(businessWithCategories.map { getFullBusinessInfo(it) })
-        }
-    }.flowOn(dispatcher) }
-
-    private suspend fun getFullBusinessInfo(businessWithCategories: BusinessWithCategories): Business =
+    suspend fun getFullBusinessInfo(businessWithCategories: BusinessWithCategories): Business =
         businessWithCategories.business.also { business ->
+            Timber.d("$businessWithCategories")
             Timber.d("$business  __  ${businessWithCategories.categories}")
             business.categories = categoryDao.getById(
                 *businessWithCategories.categories.map { it.categoryId }

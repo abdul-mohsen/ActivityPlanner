@@ -16,9 +16,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class HomeViewModel : ViewModel() {
-
-    suspend fun getAllBusiness() = BusinessRepository.allBusiness.stateIn(viewModelScope)
-
+    
     private val _businessList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
     val businessList: StateFlow<List<Business>> = _businessList
 
@@ -36,12 +34,25 @@ class HomeViewModel : ViewModel() {
                 searchHistoryList = list.map { it.query }
             }
         }
+        viewModelScope.launch {
+            BusinessRepository.allBusiness2.collect { list ->
+                _businessList.emit(
+                    list.map { business ->
+                        Timber.d("$business")
+                        BusinessRepository.getFullBusinessInfo(
+                            BusinessRepository.businessCategoriesDao.getByBusinessId(
+                                business.id
+                            )
+                        )
+                    }
+                )
+            }
+        }
     }
 
     @FlowPreview
     fun loadNewData(){
         viewModelScope.launch {
-            BusinessRepository.deleteAll()
             val tempBusinessList = mutableListOf<Business>()
             BusinessRepository.getBusinesses(
                 term = "",
