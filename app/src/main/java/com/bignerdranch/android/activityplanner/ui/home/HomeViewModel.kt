@@ -1,12 +1,12 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
+import com.bignerdranch.android.activityplanner.Repo.SearchHistoryRepository
 import com.bignerdranch.android.activityplanner.Repo.WeatherRepository
-import com.bignerdranch.android.activityplanner.model.AutoComplete
-import com.bignerdranch.android.activityplanner.model.Business
-import com.bignerdranch.android.activityplanner.model.WeatherDataState
+import com.bignerdranch.android.activityplanner.model.*
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +27,16 @@ class HomeViewModel : ViewModel() {
 
     private val _autoCompleteFlow: MutableStateFlow<AutoComplete> = MutableStateFlow(AutoComplete())
     val autoCompleteFlow: StateFlow<AutoComplete> = _autoCompleteFlow
+
+    var searchHistoryList: List<String> = emptyList()
+
+    init {
+        viewModelScope.launch {
+            SearchHistoryRepository.allSearchHistory.collect { list ->
+                searchHistoryList = list.map { it.query }
+            }
+        }
+    }
 
     @FlowPreview
     fun loadNewData(){
@@ -61,11 +71,11 @@ class HomeViewModel : ViewModel() {
     }
 
     @FlowPreview
-    fun autoComplete(input: String) {
+    fun autoComplete(query: String) {
         viewModelScope.launch {
             Timber.d("This is a test stay a way")
             BusinessRepository.autoComplete(
-                text = input,
+                text = query,
                 latitude = 37.786882,
                 longitude = -122.399972
             ).collect { autoComplete ->
@@ -79,9 +89,21 @@ class HomeViewModel : ViewModel() {
             addAll(businesses)
             addAll(terms)
             addAll(categories)
-        } }
+        } }.toSet().toList().also { Timber.d("$it") }
 
     suspend fun updateWeatherDataState(state: WeatherDataState) {
         _weatherDataState.emit(state)
+    }
+
+    @FlowPreview
+    fun searchAPI(query: String) {
+        viewModelScope.launch {
+            SearchHistoryRepository.insert(SearchHistory(query = query))
+            BusinessRepository.getBusinesses(
+                term = query,
+                latitude = 37.786882,
+                longitude = -122.399972
+            )
+        }
     }
 }

@@ -19,7 +19,7 @@ interface WeatherDao {
     @Update
     suspend fun update(vararg weather: Weather)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(vararg weather: Weather)
 
     @Delete

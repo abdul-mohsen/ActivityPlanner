@@ -2,6 +2,7 @@ package com.bignerdranch.android.activityplanner
 
 import android.app.Application
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
+import com.bignerdranch.android.activityplanner.Repo.SearchHistoryRepository
 import com.bignerdranch.android.activityplanner.Repo.WeatherRepository
 import com.bignerdranch.android.activityplanner.database.AppDatabase
 import timber.log.Timber
@@ -16,6 +17,7 @@ class App: Application() {
             BusinessRepository.businessCategoriesDao = it.businessWithCategoriesDao()
             WeatherRepository.businessWeatherDao = it.businessWeatherDao()
             WeatherRepository.weatherDao = it.weatherDao()
+            SearchHistoryRepository.searchHistoryDao = it.searchHistoryDao()
         }
         super.onCreate()
     }

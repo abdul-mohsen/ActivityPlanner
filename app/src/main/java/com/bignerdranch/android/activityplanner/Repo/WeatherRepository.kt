@@ -18,8 +18,7 @@ object WeatherRepository {
     private val dispatcher = Dispatchers.IO
     lateinit var weatherDao:  WeatherDao
     lateinit var businessWeatherDao: BusinessWeathersDao
-
-
+    
     @FlowPreview
     suspend fun getWeather(
         businessList :List<Business>
@@ -31,11 +30,12 @@ object WeatherRepository {
             }
 
             val weatherList: List<Weather> =
-                if (dbWeatherList.isNotEmpty()) dbWeatherList
+                if (dbWeatherList.isNotEmpty()) dbWeatherList.also {  Timber.d("This is from the offline") }
                 else webClient.getWeatherAtLocation(
                     query = "${business.coordinates.latitude},${business.coordinates.longitude}"
                 ).toList().also { list ->
                     list.map { weather -> weather.businessId = business.id }
+                    Timber.d("This is from the internet")
                     weatherDao.insert(*list.toTypedArray())
                 }
             Timber.d("Got a response with a list of size ${weatherList.size}")

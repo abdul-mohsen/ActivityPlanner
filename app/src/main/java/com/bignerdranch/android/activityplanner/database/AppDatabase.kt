@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.bignerdranch.android.activityplanner.model.*
 
 @Database(entities =
-[Business::class, Category::class, BusinessCategory::class,Weather::class],
+[Business::class, Category::class, BusinessCategory::class,Weather::class, SearchHistory::class],
     version = 1,
     exportSchema = false
 )
@@ -17,6 +17,7 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun weatherDao(): WeatherDao
     abstract fun businessWithCategoriesDao(): BusinessCategoriesDao
     abstract fun businessWeatherDao(): BusinessWeathersDao
+    abstract fun searchHistoryDao(): SearchHistoryDao
 
     companion object {
         private const val DATABASE_NAME = "database"
