@@ -14,7 +14,7 @@ interface CategoryDao {
     suspend fun getAll(): List<Category>
 
     @Query("SELECT * FROM category_table WHERE categoryId IN (:ids)")
-    suspend fun getById( ids: List<Long>): List<Category>
+    suspend fun getById( ids: List<Int>): List<Category>
 
     @Update
     suspend fun update(vararg category: Category)

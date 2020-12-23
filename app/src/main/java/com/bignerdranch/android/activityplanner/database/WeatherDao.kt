@@ -13,8 +13,8 @@ interface WeatherDao {
     @Query("SELECT * FROM weather_table")
     suspend fun getAll(): List<Weather>
 
-    @Query("SELECT * FROM weather_table WHERE weatherId IN (:ids)")
-    suspend fun getById( ids: List<Long>): List<Weather>
+//    @Query("SELECT * FROM weather_table WHERE weatherId IN (:ids)")
+//    suspend fun getById( ids: List<Long>): List<Weather>
 
     @Update
     suspend fun update(vararg weather: Weather)

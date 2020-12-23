@@ -2,17 +2,14 @@ package com.bignerdranch.android.activityplanner.ui.dashboard
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.Context
+import android.graphics.PointF
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.bignerdranch.android.activityplanner.R
 import com.bignerdranch.android.activityplanner.databinding.FragmentDashboardBinding
@@ -54,6 +51,11 @@ class DashboardFragment : Fragment() , OnMapReadyCallback, PermissionsListener {
 
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
+        mapboxMap.addOnCameraIdleListener {
+            mapboxMap.run {
+                Timber.d("${cameraPosition.target} __ ${projection.fromScreenLocation(PointF(0f,0f))}")
+            }
+        }
         Timber.d("I have been called")
         mapboxMap.setStyle(Style.MAPBOX_STREETS) {
             // Map is set up and the style has loaded. Now you can add data or make other map adjustments

@@ -4,8 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/holder"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_marginStart="16dp">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <TextView
         android:id="@+id/auto_fill_option"
         android:layout_width="match_parent"
@@ -14,7 +13,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:textSize="18sp"
-        android:paddingTop="8dp" />
+        android:paddingTop="8dp"
+        android:layout_marginStart="16dp"/>
 
     <TextView
         app:layout_constraintStart_toStartOf="parent"
@@ -25,6 +25,7 @@
         android:text="Category"
         android:textStyle="italic"
         android:textColor="@color/light_gray"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:layout_marginStart="16dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

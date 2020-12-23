@@ -1,11 +1,16 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.graphics.Bitmap
+import android.graphics.drawable.Icon
+import android.icu.text.SymbolTable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import androidx.core.view.get
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -14,42 +19,77 @@ import com.bignerdranch.android.activityplanner.R
 import com.bignerdranch.android.activityplanner.databinding.FragmentHomeBinding
 import com.bignerdranch.android.activityplanner.model.WeatherDataState
 import com.bignerdranch.android.activityplanner.ui.adapter.MyArrayAdapter
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import com.mapbox.android.core.permissions.PermissionsListener
+import com.mapbox.android.core.permissions.PermissionsManager
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.FeatureCollection
+import com.mapbox.geojson.Point
+import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
+import com.mapbox.mapboxsdk.location.LocationComponentOptions
+import com.mapbox.mapboxsdk.location.modes.CameraMode
+import com.mapbox.mapboxsdk.location.modes.RenderMode
+import com.mapbox.mapboxsdk.maps.MapView
+import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
+import com.mapbox.mapboxsdk.maps.Style
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import com.squareup.picasso.Picasso
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
-import okhttp3.internal.notifyAll
 import timber.log.Timber
 
-class HomeFragment : Fragment() {
+private const val SOURCE_ID = "SOURCE_ID"
+private const val ICON_ID = "ICON_ID"
+private const val LAYER_ID = "LAYER_ID"
+
+class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
+    private lateinit var mapView: MapView
+    private var permissionsManager: PermissionsManager = PermissionsManager(this)
+    private lateinit var mapboxMap: MapboxMap
     private lateinit var homeViewModel: HomeViewModel
     private lateinit var binding: FragmentHomeBinding
     private lateinit var arrayAdapter: MyArrayAdapter
     private var autoCompeteJob: Job? = null
+    private lateinit var x: Bitmap
+    private var featureList: List<Feature> = emptyList()
+    private var isMapReady = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
+        Mapbox.getInstance(requireContext(), getString(R.string.mapbox_access_token))
+    }
 
     @FlowPreview
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         Timber.d("I have been created")
-        homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
+
         binding = FragmentHomeBinding.inflate(inflater, container, false)
+
+        mapView = binding.mapView
+        mapView.onCreate(savedInstanceState)
+        mapView.getMapAsync(this)
 
         binding.businessSearch.addTextChangedListener(
             onTextChanged = { _, _, _, _ ->
                 autoCompeteJob?.cancel()
                 if (binding.businessSearch.text.isBlank())
                     arrayAdapter.submit(homeViewModel.searchHistoryList.toSet().toList())
-                else {
+                else
                     autoCompeteJob = lifecycle.coroutineScope.launch {
                         delay(1000)
                         Timber.d("Testing the delay")
                         homeViewModel.autoComplete(binding.businessSearch.text.toString())
                     }
-                }
+
             }
         )
         arrayAdapter = MyArrayAdapter(
@@ -61,9 +101,11 @@ class HomeFragment : Fragment() {
             Timber.d("Yay you found what you want to search")
             homeViewModel.searchAPI(parent.getItemAtPosition(position).toString())
         }
+
         observeBusinessList()
-        observeWeatherDataState()
-        observeAutoCompleteList()
+//        observeWeatherDataState()
+//        observeAutoCompleteList()
+
         return binding.root
     }
 
@@ -71,9 +113,14 @@ class HomeFragment : Fragment() {
     private fun observeBusinessList(){
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.businessList.collect { list ->
-                Timber.d("test")
+                Timber.d("${list.map { it.coordinates }}")
                 if (list.isNotEmpty()){
-                    homeViewModel.loadWeather(list)
+//                    homeViewModel.loadWeather(list)
+                    featureList = list.map {
+                        Feature.fromGeometry(Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude))
+                    }
+                    if (isMapReady)
+                        mapboxMap.getStyle { it.doThings(featureList) }
                 }
             }
         }
@@ -85,7 +132,9 @@ class HomeFragment : Fragment() {
                 Timber.d("$state")
                 when (state) {
                     WeatherDataState.Idle -> Timber.d("___")
-                    WeatherDataState.NewData -> homeViewModel.updateWeatherDataState(WeatherDataState.Idle)
+                    WeatherDataState.NewData -> homeViewModel.updateWeatherDataState(
+                        WeatherDataState.Idle
+                    )
                 }
             }
         }
@@ -103,5 +152,143 @@ class HomeFragment : Fragment() {
                 }
             }
         }
+    }
+
+    @FlowPreview
+    override fun onMapReady(mapboxMap: MapboxMap) {
+        this.mapboxMap = mapboxMap
+        isMapReady = true
+        mapboxMap.addOnCameraMoveListener {
+            mapboxMap.run {
+                homeViewModel.updateLocation(cameraPosition.target)
+//                getStyle { it.doThings(homeViewModel.businessList.value.map {
+//                    Feature.fromGeometry(Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude))
+//                }) }
+                Timber.d("The camera is moving ")
+            }
+        }
+        Timber.d("I have been called")
+        lifecycle.coroutineScope.launch(Dispatchers.IO) {
+            x = Picasso.get().load(R.drawable.mapbox_marker_icon_default).get()
+        }
+        mapboxMap.setStyle(Style.MAPBOX_STREETS) {
+            // Map is set up and the style has loaded. Now you can add data or make other map adjustments
+            enableLocationComponent(it, requireActivity())
+            it.doThings(featureList)
+        }
+
+    }
+
+    private fun Style.doThings(symbolLayerIconFeatureList: List<Feature>) {
+        this.run {
+            removeLayer(LAYER_ID)
+            removeSource(SOURCE_ID)
+            addImage(ICON_ID, x)
+            addSource(
+                GeoJsonSource(
+                    SOURCE_ID,
+                    FeatureCollection.fromFeatures(symbolLayerIconFeatureList)
+                )
+            )
+            addLayer(
+                SymbolLayer(LAYER_ID, SOURCE_ID).withProperties(
+                    iconImage(ICON_ID),
+                    iconAllowOverlap(true)
+                )
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableLocationComponent(loadedMapStyle: Style, activity: Activity) {
+        // Check if permissions are enabled and if not request
+        if (PermissionsManager.areLocationPermissionsGranted(activity)) {
+            // Create and customize the LocationComponent's options
+            val customLocationComponentOptions = LocationComponentOptions.builder(activity)
+                .trackingGesturesManagement(true)
+                .accuracyColor(ContextCompat.getColor(activity, R.color.mapboxGreen))
+                .build()
+            val locationComponentActivationOptions = LocationComponentActivationOptions.builder(
+                activity,
+                loadedMapStyle
+            )
+                .locationComponentOptions(customLocationComponentOptions)
+                .build()
+            // Get an instance of the LocationComponent and then adjust its settings
+            mapboxMap.locationComponent.apply {
+                // Activate the LocationComponent with options
+                activateLocationComponent(locationComponentActivationOptions)
+                // Enable to make the LocationComponent visible
+                isLocationComponentEnabled = true
+                // Set the LocationComponent's camera mode
+                cameraMode = CameraMode.TRACKING
+                // Set the LocationComponent's render mode
+                renderMode = RenderMode.COMPASS
+            }
+        } else {
+            permissionsManager = PermissionsManager(this)
+            permissionsManager.requestLocationPermissions(activity)
+        }
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        permissionsManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+    override fun onExplanationNeeded(permissionsToExplain: List<String>) {
+        Toast.makeText(
+            requireContext(),
+            R.string.user_location_permission_explanation,
+            Toast.LENGTH_LONG
+        ).show()
+    }
+    override fun onPermissionResult(granted: Boolean) {
+        if (granted) {
+            enableLocationComponent(mapboxMap.style!!, requireActivity())
+        } else {
+            Toast.makeText(
+                activity,
+                R.string.user_location_permission_not_granted,
+                Toast.LENGTH_LONG
+            ).show()
+//            finish()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        mapView.onStart()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapView.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mapView.onStop()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        mapView.onSaveInstanceState(outState)
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        mapView.onLowMemory()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mapView.onDestroy()
     }
 }

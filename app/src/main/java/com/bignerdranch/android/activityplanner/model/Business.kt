@@ -24,9 +24,9 @@ data class Business(
     @Embedded
     lateinit var coordinates: Coordinates
     @Ignore
-    lateinit var weatherTimeMap : MutableMap<Int, Weather>
+    var weatherTimeMap : MutableMap<Int, Weather> = mutableMapOf()
     @Ignore
-    lateinit var categories: List<Category>
+    var categories: List<Category> = listOf()
 
     data class Coordinates(val latitude: Double, val longitude: Double)
 }

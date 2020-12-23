@@ -6,9 +6,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.OnConflictStrategy
 import com.bignerdranch.android.activityplanner.model.BusinessCategory
-
 import com.bignerdranch.android.activityplanner.model.BusinessWithCategories
-import com.bignerdranch.android.activityplanner.model.Category
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -19,7 +17,7 @@ interface BusinessCategoriesDao {
 
     @Transaction
     @Query("SELECT * FROM business_table Where businessId = (:id)")
-    fun getByBusinessId(id: String): BusinessWithCategories
+    suspend fun getByBusinessId(id: String): BusinessWithCategories
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(vararg x: BusinessCategory)

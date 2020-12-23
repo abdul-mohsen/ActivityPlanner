@@ -27,6 +27,9 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
         setContentView(binding.root)
+
+        (this as AppCompatActivity).supportActionBar?.hide()
+
         Timber.d("You are here right>")
 
     }

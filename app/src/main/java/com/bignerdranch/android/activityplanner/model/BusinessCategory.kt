@@ -9,5 +9,5 @@ import androidx.room.Entity
 )
 data class BusinessCategory(
      val businessId: String,
-     @ColumnInfo(name = "categoryId", index = true) val categoryId: Long
+     @ColumnInfo(name = "categoryId", index = true) val categoryId: Int
 )

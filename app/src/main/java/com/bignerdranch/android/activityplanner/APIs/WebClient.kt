@@ -41,19 +41,19 @@ object WebClient {
             item as JsonObject
             temp.add(item.get("title").asString)
         }
-        autoComplete.categories = temp
+        autoComplete.categories = temp.toList()
         temp.clear()
         for (item in json.getAsJsonArray("businesses")) {
             item as JsonObject
             temp.add(item.get("name").asString)
         }
-        autoComplete.businesses = temp
+        autoComplete.businesses = temp.toList()
         temp.clear()
         for (item in json.getAsJsonArray("terms")) {
             item as JsonObject
             temp.add(item.get("text").asString)
         }
-        autoComplete.terms = temp
+        autoComplete.terms = temp.toList()
 
         autoComplete
     }

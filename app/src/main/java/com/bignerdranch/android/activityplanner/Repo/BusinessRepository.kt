@@ -3,13 +3,14 @@ package com.bignerdranch.android.activityplanner.Repo
 import com.bignerdranch.android.activityplanner.APIs.WebClient
 import com.bignerdranch.android.activityplanner.database.BusinessDao
 import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
-import com.bignerdranch.android.activityplanner.database.BusinessWeathersDao
 import com.bignerdranch.android.activityplanner.database.CategoryDao
 import com.bignerdranch.android.activityplanner.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
 import java.lang.Exception
+import kotlin.math.cos
+import kotlin.math.pow
 
 object BusinessRepository {
     private val webClient = WebClient.yelpAPI
@@ -18,15 +19,18 @@ object BusinessRepository {
     lateinit var businessCategoriesDao: BusinessCategoriesDao
     private val dispatcher = Dispatchers.IO
 
-    val allBusiness2 by lazy { businessDao.getAll() }
-//    val allBusiness by lazy { flow{
-//        businessDao.getAll().collect {list ->
-//            emit( list.map { business ->
-//                Timber.d("$business")
-//                getFullBusinessInfo(businessCategoriesDao.getByBusinessId(business.id))
-//            })
-//        }
-//    }.flowOn(dispatcher) }
+    val allBusiness: Flow<List<Business>> by lazy { businessDao.getAll() }
+
+    suspend fun allBusinessByLatLon(latitude: Double, longitude: Double) =
+        businessDao.getAllByDistance(
+            latitude,
+            longitude,
+            cal(latitude)
+        )
+
+    private fun cal(lat: Double): Double = cos(Math.toRadians(lat)).pow(2)
+
+    suspend fun getById(id: String) = businessCategoriesDao.getByBusinessId(id)
 
     suspend fun getFullBusinessInfo(businessWithCategories: BusinessWithCategories): Business =
         businessWithCategories.business.also { business ->
@@ -42,10 +46,10 @@ object BusinessRepository {
         val categories: MutableSet<Category> = mutableSetOf()
         businesses.forEach { business ->
             business.categories.forEach { category ->
-                categories.add(category)
+                categories.add(Category(category.name))
             }
         }
-        categoryDao.insert(*categories.toTypedArray())
+        categoryDao.insert(*categories.toSet().toTypedArray())
         val uniqueCategories = categoryDao.getAll()
 
         businesses.forEach { business ->
@@ -72,10 +76,6 @@ object BusinessRepository {
 
     suspend fun delete(vararg business: Business) {
         businessDao.delete(*business)
-    }
-
-    suspend fun update(vararg business: Business) {
-        businessDao.update(*business)
     }
 
     @FlowPreview

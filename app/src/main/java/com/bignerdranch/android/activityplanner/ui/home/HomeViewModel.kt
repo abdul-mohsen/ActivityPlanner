@@ -1,5 +1,6 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
+import androidx.core.graphics.translationMatrix
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,8 @@ import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
 import com.bignerdranch.android.activityplanner.Repo.SearchHistoryRepository
 import com.bignerdranch.android.activityplanner.Repo.WeatherRepository
 import com.bignerdranch.android.activityplanner.model.*
+import com.mapbox.mapboxsdk.geometry.LatLng
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +19,10 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class HomeViewModel : ViewModel() {
-    
+
+    private var location: LatLng = LatLng(37.786942,-122.399643)
+    private var getData = BusinessRepository.allBusiness
+
     private val _businessList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
     val businessList: StateFlow<List<Business>> = _businessList
 
@@ -29,18 +35,18 @@ class HomeViewModel : ViewModel() {
     var searchHistoryList: List<String> = emptyList()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             SearchHistoryRepository.allSearchHistory.collect { list ->
                 searchHistoryList = list.map { it.query }
             }
         }
-        viewModelScope.launch {
-            BusinessRepository.allBusiness2.collect { list ->
+        viewModelScope.launch(Dispatchers.IO) {
+            getData.collect { list ->
                 _businessList.emit(
                     list.map { business ->
                         Timber.d("$business")
                         BusinessRepository.getFullBusinessInfo(
-                            BusinessRepository.businessCategoriesDao.getByBusinessId(
+                            BusinessRepository.getById(
                                 business.id
                             )
                         )
@@ -51,19 +57,18 @@ class HomeViewModel : ViewModel() {
     }
 
     @FlowPreview
-    fun loadNewData(){
+    private fun loadNewData(){
         viewModelScope.launch {
             val tempBusinessList = mutableListOf<Business>()
             BusinessRepository.getBusinesses(
                 term = "",
-                latitude = 37.786882,
-                longitude = -122.399972
+                latitude = location.latitude,
+                longitude = location.longitude
             ).collect { list ->
                 tempBusinessList.addAll(list)
             }
             Timber.d("A new list have been loaded $tempBusinessList")
             BusinessRepository.insert(tempBusinessList)
-            _businessList.emit(tempBusinessList)
         }
     }
 
@@ -72,7 +77,6 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             Timber.d("$list")
             WeatherRepository.getWeather(list).collect{ list ->
-                _businessList.value.first()
                 _businessList.value.first { it.id == list.first().businessId }
                     .weatherTimeMap.putAll(list.map { it.timeEpoch to it }.toMap())
                 Timber.d("new Weather data")
@@ -84,12 +88,12 @@ class HomeViewModel : ViewModel() {
     @FlowPreview
     fun autoComplete(query: String) {
         viewModelScope.launch {
-            Timber.d("This is a test stay a way")
             BusinessRepository.autoComplete(
                 text = query,
-                latitude = 37.786882,
-                longitude = -122.399972
+                latitude = location.latitude,
+                longitude = location.longitude
             ).collect { autoComplete ->
+                Timber.d("This is a test stay a way $autoComplete")
                 _autoCompleteFlow.emit(autoComplete)
             }
         }
@@ -112,9 +116,20 @@ class HomeViewModel : ViewModel() {
             SearchHistoryRepository.insert(SearchHistory(query = query))
             BusinessRepository.getBusinesses(
                 term = query,
-                latitude = 37.786882,
-                longitude = -122.399972
+                latitude = location.latitude,
+                longitude = location.longitude
             )
+        }
+    }
+
+    @FlowPreview
+    fun updateLocation(latLng: LatLng) {
+        viewModelScope.launch(Dispatchers.IO) {
+            location = latLng
+            val temp = BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude)
+            Timber.d("$temp  +++_+_+_+_")
+            if (temp.isEmpty()) loadNewData()
+            else _businessList.emit(temp)
         }
     }
 }

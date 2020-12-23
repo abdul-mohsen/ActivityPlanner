@@ -7,6 +7,7 @@ import com.google.gson.annotations.SerializedName
 
 @Entity(tableName = "category_table")
 data class Category(
-    @ColumnInfo(name = "categoryId", index = true) @PrimaryKey(autoGenerate = true) val id: Long,
-    @SerializedName("title") val name: String = ""
+    @SerializedName("title") val name: String,
+    @ColumnInfo(name = "categoryId", index = true)
+    @PrimaryKey val id: Int = name.hashCode()
 )
