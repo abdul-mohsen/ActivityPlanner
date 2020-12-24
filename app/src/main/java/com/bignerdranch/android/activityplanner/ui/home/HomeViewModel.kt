@@ -1,27 +1,26 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
-import androidx.core.graphics.translationMatrix
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
 import com.bignerdranch.android.activityplanner.Repo.SearchHistoryRepository
 import com.bignerdranch.android.activityplanner.Repo.WeatherRepository
-import com.bignerdranch.android.activityplanner.model.*
+import com.bignerdranch.android.activityplanner.model.AutoComplete
+import com.bignerdranch.android.activityplanner.model.Business
+import com.bignerdranch.android.activityplanner.model.SearchHistory
+import com.bignerdranch.android.activityplanner.model.WeatherDataState
 import com.mapbox.mapboxsdk.geometry.LatLng
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class HomeViewModel : ViewModel() {
 
     private var location: LatLng = LatLng(37.786942,-122.399643)
     private var getData = BusinessRepository.allBusiness
+    private var onMoveScreenJob: Job? = null
 
     private val _businessList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
     val businessList: StateFlow<List<Business>> = _businessList
@@ -124,11 +123,18 @@ class HomeViewModel : ViewModel() {
 
     @FlowPreview
     fun updateLocation(latLng: LatLng) {
-        viewModelScope.launch(Dispatchers.IO) {
+        onMoveScreenJob?.cancel()
+        onMoveScreenJob = viewModelScope.launch(Dispatchers.IO) {
             location = latLng
+            delay(500)
+
             val temp = BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude)
             Timber.d("$temp  +++_+_+_+_")
-            if (temp.isEmpty()) loadNewData()
+            if (temp.isEmpty()){
+                delay(1000)
+                Timber.d("Going online")
+                loadNewData()
+            }
             else _businessList.emit(temp)
         }
     }

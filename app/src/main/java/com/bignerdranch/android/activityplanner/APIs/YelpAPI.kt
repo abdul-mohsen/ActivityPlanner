@@ -31,7 +31,7 @@ interface YelpAPI {
     ): AutoComplete
 
     companion object {
-        private const val radius = 15000
+        private const val radius = 40000
         private val newYorkLocation: Business.Coordinates =
             Business.Coordinates(40.773326878163, -73.9113807678223)
         private const val extraData = "reservation, waitlist_reservation, open_to_all, wheelchair_accessible"
