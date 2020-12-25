@@ -25,8 +25,8 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
         val item = getItem(position)
         holder.bind(
             item.name,
-            item.image_url,
-            item.weatherTimeMap[1608879600]?.tempC.toString(),
+            item.imageUrl,
+            item.weatherTimeMap["2020-12-25 00:00"]?.tempC.toString(),
             "(${item.reviewCount})",
             ratingToResourceId(item.rating)
         )
@@ -52,10 +52,10 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
             oldItem.id == newItem.id
 
         override fun areContentsTheSame(oldItem: Business, newItem: Business): Boolean =
-            oldItem == newItem
+            oldItem == newItem && oldItem.weatherTimeMap.size == newItem.weatherTimeMap.size
     }
 
-    fun ratingToResourceId(input: Float) = when(input){
+    private fun ratingToResourceId(input: Float) = when(input){
         1.0f -> R.drawable.stars_small_0
         1.5f -> R.drawable.stars_small_1_half
         2.0f -> R.drawable.stars_small_2

@@ -18,13 +18,14 @@ data class Business(
     lateinit var alias: String
     lateinit var phone: String
     lateinit var price: String
-    lateinit var image_url: String
+    @SerializedName("image_url")
+    lateinit var imageUrl: String
     lateinit var url: String
 
     @Embedded
     lateinit var coordinates: Coordinates
     @Ignore
-    var weatherTimeMap : MutableMap<Int, Weather> = mutableMapOf()
+    var weatherTimeMap : MutableMap<String, Weather> = mutableMapOf()
     @Ignore
     var categories: List<Category> = listOf()
 

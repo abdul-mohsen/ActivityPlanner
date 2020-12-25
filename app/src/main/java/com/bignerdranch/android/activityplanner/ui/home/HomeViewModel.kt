@@ -1,6 +1,5 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
-import android.text.format.DateFormat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import timber.log.Timber
-import java.util.*
 
 class HomeViewModel : ViewModel() {
 
@@ -80,7 +78,7 @@ class HomeViewModel : ViewModel() {
             WeatherRepository.getWeather(list).collect{ list ->
                 try {
                     _businessList.value.first { it.id == list.first().businessId }
-                        .weatherTimeMap.putAll(list.map { it.timeEpoch to it }.toMap())
+                        .weatherTimeMap.putAll(list.map { it.time to it }.toMap())
                     Timber.d("new Weather data")
                     _weatherDataState.emit(WeatherDataState.NewData)
                 } catch (e: Exception) {
@@ -147,7 +145,7 @@ class HomeViewModel : ViewModel() {
     }
 
     @FlowPreview
-    suspend fun updateData(businesses: MutableList<Business>, date: Int = 1608879600) {
+    suspend fun updateData(businesses: MutableList<Business>, date: String = "2020-12-25 00:00") {
         val queryWeatherList = businesses.filter { it.weatherTimeMap[date] == null }
         val ids = queryWeatherList.map { it.id }
         Timber.d("$ids , $date")
@@ -165,11 +163,6 @@ class HomeViewModel : ViewModel() {
         }
 
         _businessList.emit(businesses)
-
-        val myTempFormat = "yyyy-MM-dd HH:00"
-        DateFormat.format(myTempFormat, Date(date* 1000L)).also {
-            Timber.d("$it")
-        }
         Timber.d("some complicated shit is going on here")
         Timber.d("${queryWeatherList.map { it.weatherTimeMap }}")
         _weatherDataState.emit(WeatherDataState.NewData)

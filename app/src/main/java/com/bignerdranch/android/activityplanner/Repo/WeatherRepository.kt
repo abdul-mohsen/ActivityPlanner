@@ -19,7 +19,7 @@ object WeatherRepository {
     lateinit var weatherDao:  WeatherDao
     lateinit var businessWeatherDao: BusinessWeathersDao
 
-    suspend fun allWeatherByBusinessIdAndDate(ids: List<String>, date: Int) =
+    suspend fun allWeatherByBusinessIdAndDate(ids: List<String>, date: String) =
         weatherDao.getByBusinessIdAndDate(
             ids,
             date

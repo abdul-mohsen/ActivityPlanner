@@ -48,18 +48,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 
-private const val SOURCE_ID = "SOURCE_ID"
-private const val ICON_ID = "ICON_ID"
-private const val LAYER_ID = "LAYER_ID"
-
 class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private lateinit var mapView: MapView
     private var permissionsManager: PermissionsManager = PermissionsManager(this)
     private lateinit var mapboxMap: MapboxMap
-    private lateinit var homeViewModel: HomeViewModel
+    private val homeViewModel: HomeViewModel by lazy { ViewModelProvider(this).get(HomeViewModel::class.java) }
     private lateinit var binding: FragmentHomeBinding
     private lateinit var arrayAdapter: MyArrayAdapter
-    private lateinit var BusinessAdapter: BusinessAdapter
+    private lateinit var businessAdapter: BusinessAdapter
     private var autoCompeteJob: Job? = null
     private lateinit var x: Bitmap
     private var featureList: List<Feature> = emptyList()
@@ -67,7 +63,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
         Mapbox.getInstance(requireContext(), getString(R.string.mapbox_access_token))
         lifecycle.coroutineScope.launch(Dispatchers.IO) {
             x = Picasso.get().load(R.drawable.mapbox_marker_icon_default).get()
@@ -88,22 +83,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
 
-        BusinessAdapter = BusinessAdapter()
+        businessAdapter = BusinessAdapter()
 
-        binding.grid.adapter = BusinessAdapter
-
-        val snapHelper = LinearSnapHelper()
-        val z =
-        binding.grid.attachSnapHelperWithListener(snapHelper) { position ->
-            val cord = homeViewModel.businessList.value[position].coordinates
-            mapboxMap.animateCamera { CameraPosition.Builder()
-                .target(LatLng(cord.latitude,cord.longitude))
-                .zoom(10.0)
-                .tilt(20.0)
-                .build()
-            }
-        }
-        snapHelper.attachToRecyclerView(binding.grid)
+        binding.grid.adapter = businessAdapter
 
         binding.businessSearch.addTextChangedListener(
             onTextChanged = { _, _, _, _ ->
@@ -168,7 +150,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
                         homeViewModel.updateWeatherDataState(
                             WeatherDataState.Idle
                         )
-                        BusinessAdapter.submitList(homeViewModel.businessList.value.also {
+                        businessAdapter.submitList(homeViewModel.businessList.value.also {
                             Timber.d(
                                 "why is not updating $it"
                             )
@@ -200,10 +182,17 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         mapboxMap.addOnCameraMoveListener {
             mapboxMap.run {
                 homeViewModel.updateLocation(cameraPosition.target)
-//                getStyle { it.doThings(homeViewModel.businessList.value.map {
-//                    Feature.fromGeometry(Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude))
-//                }) }
                 Timber.d("The camera is moving ")
+            }
+        }
+        val snapHelper = LinearSnapHelper()
+        binding.grid.attachSnapHelperWithListener(snapHelper) { position ->
+            val cord = homeViewModel.businessList.value[position].coordinates
+            mapboxMap.animateCamera { CameraPosition.Builder()
+                .target(LatLng(cord.latitude,cord.longitude))
+                .zoom(10.0)
+                .tilt(20.0)
+                .build()
             }
         }
         Timber.d("I have been called")
@@ -340,6 +329,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         val snapOnScrollListener =
             SnapOnScrollListener(snapHelper, behavior, onSnapPositionChangeListener)
         addOnScrollListener(snapOnScrollListener)
+    }
 
+    companion object {
+        private const val SOURCE_ID = "SOURCE_ID"
+        private const val ICON_ID = "ICON_ID"
+        private const val LAYER_ID = "LAYER_ID"
     }
 }

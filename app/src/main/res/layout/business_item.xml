@@ -38,7 +38,7 @@
                     android:layout_height="wrap_content"
                     android:scaleType="centerCrop"
                     android:src="@drawable/stars_small_2_half"
-                    android:layout_gravity="bottom"/>
+                    android:layout_gravity="center"/>
 
                 <TextView
                     android:id="@+id/review_count"
