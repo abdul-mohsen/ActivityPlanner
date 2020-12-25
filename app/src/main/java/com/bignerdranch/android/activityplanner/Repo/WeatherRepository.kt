@@ -18,6 +18,12 @@ object WeatherRepository {
     private val dispatcher = Dispatchers.IO
     lateinit var weatherDao:  WeatherDao
     lateinit var businessWeatherDao: BusinessWeathersDao
+
+    suspend fun allWeatherByBusinessIdAndDate(ids: List<String>, date: Int) =
+        weatherDao.getByBusinessIdAndDate(
+            ids,
+            date
+        )
     
     @FlowPreview
     suspend fun getWeather(

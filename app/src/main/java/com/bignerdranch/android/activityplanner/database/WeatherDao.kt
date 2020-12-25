@@ -16,6 +16,9 @@ interface WeatherDao {
 //    @Query("SELECT * FROM weather_table WHERE weatherId IN (:ids)")
 //    suspend fun getById( ids: List<Long>): List<Weather>
 
+    @Query("SELECT * FROM weather_table WHERE businessId IN (:ids) AND timeEpoch = (:date)")
+    suspend fun getByBusinessIdAndDate(ids: List<String>, date: Int): List<Weather>
+
     @Update
     suspend fun update(vararg weather: Weather)
 

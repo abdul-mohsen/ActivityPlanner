@@ -25,4 +25,14 @@
         android:completionThreshold="0"
         android:layout_margin="16dp"
         android:textColor="@color/black" />
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/grid"
+        android:layout_width="wrap_content"
+        android:layout_height="200dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:listitem="@layout/business_item"
+        android:orientation="horizontal"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

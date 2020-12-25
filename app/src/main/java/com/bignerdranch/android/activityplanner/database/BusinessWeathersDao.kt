@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Transaction
 import androidx.room.Query
 import com.bignerdranch.android.activityplanner.model.BusinessWithWeathers
+import com.bignerdranch.android.activityplanner.model.Weather
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,6 +15,6 @@ interface BusinessWeathersDao {
 
     @Transaction
     @Query("SELECT * FROM business_table Where businessId = (:id)")
-    fun getByBusinessId(id: String): BusinessWithWeathers
+    suspend fun getByBusinessId(id: String): BusinessWithWeathers
 
 }

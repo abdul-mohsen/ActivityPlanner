@@ -12,14 +12,14 @@ data class Business(
         var isClosed: Boolean,
         @SerializedName("review_count")
         var reviewCount: Int,
-        var rating: Float,
-
-        var url: String
+        var rating: Float
     ) {
     lateinit var name: String
     lateinit var alias: String
     lateinit var phone: String
     lateinit var price: String
+    lateinit var image_url: String
+    lateinit var url: String
 
     @Embedded
     lateinit var coordinates: Coordinates

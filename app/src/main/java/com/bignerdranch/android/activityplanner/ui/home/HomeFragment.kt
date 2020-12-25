@@ -3,8 +3,6 @@ package com.bignerdranch.android.activityplanner.ui.home
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Bitmap
-import android.graphics.drawable.Icon
-import android.icu.text.SymbolTable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,9 +13,15 @@ import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.coroutineScope
+import androidx.recyclerview.widget.LinearSnapHelper
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SnapHelper
+import com.bignerdranch.android.activityplanner.OnSnapPositionChangeListener
 import com.bignerdranch.android.activityplanner.R
+import com.bignerdranch.android.activityplanner.SnapOnScrollListener
 import com.bignerdranch.android.activityplanner.databinding.FragmentHomeBinding
 import com.bignerdranch.android.activityplanner.model.WeatherDataState
+import com.bignerdranch.android.activityplanner.ui.adapter.BusinessAdapter
 import com.bignerdranch.android.activityplanner.ui.adapter.MyArrayAdapter
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -25,6 +29,8 @@ import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.camera.CameraPosition
+import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
 import com.mapbox.mapboxsdk.location.LocationComponentOptions
 import com.mapbox.mapboxsdk.location.modes.CameraMode
@@ -53,6 +59,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private lateinit var homeViewModel: HomeViewModel
     private lateinit var binding: FragmentHomeBinding
     private lateinit var arrayAdapter: MyArrayAdapter
+    private lateinit var BusinessAdapter: BusinessAdapter
     private var autoCompeteJob: Job? = null
     private lateinit var x: Bitmap
     private var featureList: List<Feature> = emptyList()
@@ -62,6 +69,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         super.onCreate(savedInstanceState)
         homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
         Mapbox.getInstance(requireContext(), getString(R.string.mapbox_access_token))
+        lifecycle.coroutineScope.launch(Dispatchers.IO) {
+            x = Picasso.get().load(R.drawable.mapbox_marker_icon_default).get()
+        }
     }
 
     @FlowPreview
@@ -77,6 +87,23 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         mapView = binding.mapView
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
+
+        BusinessAdapter = BusinessAdapter()
+
+        binding.grid.adapter = BusinessAdapter
+
+        val snapHelper = LinearSnapHelper()
+        val z =
+        binding.grid.attachSnapHelperWithListener(snapHelper) { position ->
+            val cord = homeViewModel.businessList.value[position].coordinates
+            mapboxMap.animateCamera { CameraPosition.Builder()
+                .target(LatLng(cord.latitude,cord.longitude))
+                .zoom(10.0)
+                .tilt(20.0)
+                .build()
+            }
+        }
+        snapHelper.attachToRecyclerView(binding.grid)
 
         binding.businessSearch.addTextChangedListener(
             onTextChanged = { _, _, _, _ ->
@@ -103,21 +130,26 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         }
 
         observeBusinessList()
-//        observeWeatherDataState()
-//        observeAutoCompleteList()
+        observeWeatherDataState()
+        observeAutoCompleteList()
 
         return binding.root
     }
 
     @FlowPreview
-    private fun observeBusinessList(){
+    private fun observeBusinessList() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.businessList.collect { list ->
                 Timber.d("${list.map { it.coordinates }}")
-                if (list.isNotEmpty()){
-//                    homeViewModel.loadWeather(list)
+                if (list.isNotEmpty()) {
+                    homeViewModel.updateData(list.toMutableList())
                     featureList = list.map {
-                        Feature.fromGeometry(Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude))
+                        Feature.fromGeometry(
+                            Point.fromLngLat(
+                                it.coordinates.longitude,
+                                it.coordinates.latitude
+                            )
+                        )
                     }
                     if (isMapReady)
                         mapboxMap.getStyle { it.doThings(featureList) }
@@ -132,9 +164,16 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
                 Timber.d("$state")
                 when (state) {
                     WeatherDataState.Idle -> Timber.d("___")
-                    WeatherDataState.NewData -> homeViewModel.updateWeatherDataState(
-                        WeatherDataState.Idle
-                    )
+                    WeatherDataState.NewData -> {
+                        homeViewModel.updateWeatherDataState(
+                            WeatherDataState.Idle
+                        )
+                        BusinessAdapter.submitList(homeViewModel.businessList.value.also {
+                            Timber.d(
+                                "why is not updating $it"
+                            )
+                        })
+                    }
                 }
             }
         }
@@ -146,9 +185,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
                 autoCompleteFlow.collect { autoComplete ->
                     val autoList = getListOfAutoComplete(autoComplete).toMutableList()
                     Timber.d("my auto list $autoList")
-                     arrayAdapter.submit(
-                         autoList
-                     )
+                    arrayAdapter.submit(
+                        autoList
+                    )
                 }
             }
         }
@@ -168,9 +207,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
             }
         }
         Timber.d("I have been called")
-        lifecycle.coroutineScope.launch(Dispatchers.IO) {
-            x = Picasso.get().load(R.drawable.mapbox_marker_icon_default).get()
-        }
         mapboxMap.setStyle(Style.MAPBOX_STREETS) {
             // Map is set up and the style has loaded. Now you can add data or make other map adjustments
             enableLocationComponent(it, requireActivity())
@@ -230,6 +266,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
             permissionsManager.requestLocationPermissions(activity)
         }
     }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -237,6 +274,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     ) {
         permissionsManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
+
     override fun onExplanationNeeded(permissionsToExplain: List<String>) {
         Toast.makeText(
             requireContext(),
@@ -244,6 +282,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
             Toast.LENGTH_LONG
         ).show()
     }
+
     override fun onPermissionResult(granted: Boolean) {
         if (granted) {
             enableLocationComponent(mapboxMap.style!!, requireActivity())
@@ -290,5 +329,17 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
+    }
+
+    private fun RecyclerView.attachSnapHelperWithListener(
+        snapHelper: SnapHelper,
+        behavior: SnapOnScrollListener.Behavior = SnapOnScrollListener.Behavior.NOTIFY_ON_SCROLL,
+        onSnapPositionChangeListener: OnSnapPositionChangeListener
+    ) {
+        snapHelper.attachToRecyclerView(this)
+        val snapOnScrollListener =
+            SnapOnScrollListener(snapHelper, behavior, onSnapPositionChangeListener)
+        addOnScrollListener(snapOnScrollListener)
+
     }
 }

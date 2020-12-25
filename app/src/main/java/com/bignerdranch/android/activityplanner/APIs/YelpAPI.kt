@@ -15,7 +15,7 @@ interface YelpAPI {
         @Query("longitude") longitude: Double,
         @Query("radius") radius: Int = YelpAPI.radius,
         @Query("categories") categories: String ="",
-        @Query("limit") limit: Int = 20,
+        @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0,
         @Query("sort_by") sortBy: String = "best_match",
         @Query("price") price: String = "1,2,3,4",
