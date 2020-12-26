@@ -26,19 +26,25 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
         holder.bind(
             item.name,
             item.imageUrl,
-            item.weatherTimeMap["2020-12-25 00:00"]?.tempC.toString(),
+            item.weather?.tempC.toString(),
             "(${item.reviewCount})",
-            ratingToResourceId(item.rating)
+            ratingToResourceId(item.rating),
+            "https:${item.weather?.condition?.icon}"
         )
     }
 
     inner class AutoFillViewHolder(private val bindingHolder: BusinessItemBinding):
         RecyclerView.ViewHolder(bindingHolder.root) {
 
-        fun bind(option: String, url: String, temp: String, reviewCount: String, imageResource: Int) {
+        fun bind(option: String, url: String, temp: String, reviewCount: String, imageResource: Int, weatherUrl: String) {
             bindingHolder.businessName.text = option
-            bindingHolder.weatherTemp.text = "The temp is ${temp}c"
+            bindingHolder.weatherTemp.text = "${temp}°C"
             bindingHolder.reviewCount.text = reviewCount
+            bindingHolder.weatherImage
+            Picasso.get().load(weatherUrl)
+                .fit()
+                .centerInside()
+                .into(bindingHolder.weatherImage)
             bindingHolder.rateImage.setImageResource(imageResource)
             Picasso.get().load(url)
                 .fit()
@@ -52,7 +58,7 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
             oldItem.id == newItem.id
 
         override fun areContentsTheSame(oldItem: Business, newItem: Business): Boolean =
-            oldItem == newItem && oldItem.weatherTimeMap.size == newItem.weatherTimeMap.size
+            (oldItem == newItem).also { Timber.d("${oldItem.weather?.time}   ${newItem.weather?.time}") }
     }
 
     private fun ratingToResourceId(input: Float) = when(input){
@@ -67,4 +73,5 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
         5.0f -> R.drawable.stars_small_4_half
         else -> R.drawable.stars_small_0
     }
+
 }

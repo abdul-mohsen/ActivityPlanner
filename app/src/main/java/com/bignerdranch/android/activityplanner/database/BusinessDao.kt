@@ -17,9 +17,9 @@ interface BusinessDao {
 
     @Query("""
         SELECT * FROM business_table WHERE (latitude - (:latitude)) * (latitude - (:latitude)) +
-        (longitude - (:longitude)) * (longitude - (:longitude)) * (:x) < 0.225
+        (longitude - (:longitude)) * (longitude - (:longitude)) * (:x) < 0.225 
     """)
-    suspend fun getAllByDistance(latitude: Double, longitude: Double, x: Double): List<Business>
+    fun getAllByDistance(latitude: Double, longitude: Double, x: Double): Flow<List<Business>>
 
     @Update
     suspend fun update(vararg business: Business)

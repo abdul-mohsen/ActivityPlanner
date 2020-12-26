@@ -21,12 +21,8 @@ object BusinessRepository {
 
     val allBusiness: Flow<List<Business>> by lazy { businessDao.getAll() }
 
-    suspend fun allBusinessByLatLon(latitude: Double, longitude: Double) =
-        businessDao.getAllByDistance(
-            latitude,
-            longitude,
-            cal(latitude)
-        )
+    fun allBusinessByLatLon(latitude: Double, longitude: Double) =
+        businessDao.getAllByDistance(latitude, longitude, cal(latitude))
 
     private fun cal(lat: Double): Double = cos(Math.toRadians(lat)).pow(2)
 

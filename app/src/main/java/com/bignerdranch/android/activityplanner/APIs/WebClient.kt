@@ -28,7 +28,6 @@ object WebClient {
             Timber.d("$this")
             for (item in this) {
                 Timber.d("${item.categories}")
-                item.weatherTimeMap = mutableMapOf()
             }
         }
     }

@@ -30,14 +30,7 @@ object WeatherRepository {
         businessList :List<Business>
     ): Flow<List<Weather>> = businessList.asFlow().flatMapMerge(concurrency = 4) { business ->
         flow {
-
-            val dbWeatherList = businessWeatherDao.getByBusinessId(business.id).weathers.also {
-                it.map { weather -> weather.businessId = business.id }
-            }
-
-            val weatherList: List<Weather> =
-                if (dbWeatherList.isNotEmpty()) dbWeatherList.also {  Timber.d("This is from the offline") }
-                else webClient.getWeatherAtLocation(
+            val weatherList: List<Weather> = webClient.getWeatherAtLocation(
                     query = "${business.coordinates.latitude},${business.coordinates.longitude}"
                 ).toList().also { list ->
                     list.map { weather -> weather.businessId = business.id }

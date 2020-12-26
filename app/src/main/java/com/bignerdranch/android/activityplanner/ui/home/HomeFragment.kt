@@ -3,6 +3,7 @@ package com.bignerdranch.android.activityplanner.ui.home
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Bitmap
+import android.opengl.Visibility
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -47,6 +48,7 @@ import com.squareup.picasso.Picasso
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import timber.log.Timber
+import java.lang.Exception
 
 class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private lateinit var mapView: MapView
@@ -86,7 +88,23 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         businessAdapter = BusinessAdapter()
 
         binding.grid.adapter = businessAdapter
+        binding.button.setOnClickListener {
+            binding.layoutSlider.visibility = when(binding.layoutSlider.visibility){
+                View.GONE -> View.VISIBLE
+                else -> View.GONE
+            }
+        }
+        binding.slider.addOnChangeListener { _, value, _ ->
+            val input = value.toInt().toString()
+            val output =
+                if (input.length < 2) "0$input"
+                else input
+            val output2 = "2020-12-26 $output:00"
+            homeViewModel.updateDate(date = output2, targetState = WeatherDataState.NewTemp)
+            binding.timeText.text = output2
+            Timber.d("$output ____________________")
 
+        }
         binding.businessSearch.addTextChangedListener(
             onTextChanged = { _, _, _, _ ->
                 autoCompeteJob?.cancel()
@@ -101,10 +119,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
 
             }
         )
-        arrayAdapter = MyArrayAdapter(
-            requireContext(),
-            R.layout.auto_fill_item
-        )
+        arrayAdapter = MyArrayAdapter(requireContext(), R.layout.auto_fill_item)
         binding.businessSearch.setAdapter(arrayAdapter)
         binding.businessSearch.setOnItemClickListener { parent, _, position, _ ->
             Timber.d("Yay you found what you want to search")
@@ -122,17 +137,13 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private fun observeBusinessList() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.businessList.collect { list ->
-                Timber.d("${list.map { it.coordinates }}")
                 if (list.isNotEmpty()) {
-                    homeViewModel.updateData(list.toMutableList())
-                    featureList = list.map {
-                        Feature.fromGeometry(
-                            Point.fromLngLat(
-                                it.coordinates.longitude,
-                                it.coordinates.latitude
-                            )
-                        )
-                    }
+                    if (list.first().weather == null)
+                        homeViewModel.updateDate(list.toMutableList())
+
+                    featureList = list.map { Feature.fromGeometry(
+                        Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude)
+                    ) }
                     if (isMapReady)
                         mapboxMap.getStyle { it.doThings(featureList) }
                 }
@@ -140,6 +151,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         }
     }
 
+    @FlowPreview
     private fun observeWeatherDataState() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.weatherDataState.collect { state ->
@@ -147,29 +159,27 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
                 when (state) {
                     WeatherDataState.Idle -> Timber.d("___")
                     WeatherDataState.NewData -> {
-                        homeViewModel.updateWeatherDataState(
-                            WeatherDataState.Idle
-                        )
-                        businessAdapter.submitList(homeViewModel.businessList.value.also {
-                            Timber.d(
-                                "why is not updating $it"
-                            )
-                        })
+                        homeViewModel.updateWeatherDataState(WeatherDataState.Idle)
+                        businessAdapter.submitList(homeViewModel.businessList.value)
+                    }
+                    WeatherDataState.NewTemp -> {
+                        homeViewModel.updateWeatherDataState(WeatherDataState.Idle)
+                        businessAdapter.submitList(homeViewModel.businessList.value)
+                        businessAdapter.notifyDataSetChanged()
                     }
                 }
             }
         }
     }
 
+    @FlowPreview
     private fun observeAutoCompleteList() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.apply {
                 autoCompleteFlow.collect { autoComplete ->
                     val autoList = getListOfAutoComplete(autoComplete).toMutableList()
                     Timber.d("my auto list $autoList")
-                    arrayAdapter.submit(
-                        autoList
-                    )
+                    arrayAdapter.submit(autoList)
                 }
             }
         }
@@ -179,7 +189,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
         isMapReady = true
-        mapboxMap.addOnCameraMoveListener {
+        mapboxMap.addOnFlingListener {
             mapboxMap.run {
                 homeViewModel.updateLocation(cameraPosition.target)
                 Timber.d("The camera is moving ")
@@ -187,12 +197,16 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         }
         val snapHelper = LinearSnapHelper()
         binding.grid.attachSnapHelperWithListener(snapHelper) { position ->
-            val cord = homeViewModel.businessList.value[position].coordinates
-            mapboxMap.animateCamera { CameraPosition.Builder()
-                .target(LatLng(cord.latitude,cord.longitude))
-                .zoom(10.0)
-                .tilt(20.0)
-                .build()
+            try {
+                val cord = homeViewModel.businessList.value[position].coordinates
+                mapboxMap.animateCamera { CameraPosition.Builder()
+                    .target(LatLng(cord.latitude,cord.longitude))
+                    .zoom(10.0)
+                    .tilt(20.0)
+                    .build()
+                }
+            } catch (e: Exception) {
+                Timber.d(e)
             }
         }
         Timber.d("I have been called")

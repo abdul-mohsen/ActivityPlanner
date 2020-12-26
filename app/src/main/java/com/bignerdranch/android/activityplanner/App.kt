@@ -23,7 +23,7 @@ class App: Application() {
             SearchHistoryRepository.searchHistoryDao = it.searchHistoryDao()
         }
 
-        Picasso.get().setIndicatorsEnabled(true)
+//        Picasso.get().setIndicatorsEnabled(true)
 
         super.onCreate()
     }

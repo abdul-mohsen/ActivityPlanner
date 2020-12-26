@@ -12,7 +12,9 @@ data class Business(
         var isClosed: Boolean,
         @SerializedName("review_count")
         var reviewCount: Int,
-        var rating: Float
+        var rating: Float,
+        @Ignore
+        var weather: Weather? = null
     ) {
     lateinit var name: String
     lateinit var alias: String
@@ -25,9 +27,9 @@ data class Business(
     @Embedded
     lateinit var coordinates: Coordinates
     @Ignore
-    var weatherTimeMap : MutableMap<String, Weather> = mutableMapOf()
-    @Ignore
     var categories: List<Category> = listOf()
 
     data class Coordinates(val latitude: Double, val longitude: Double)
+    constructor(id: String, isClaimed: Boolean, isClosed: Boolean, reviewCount: Int, rating: Float):
+            this(id, isClaimed, isClosed, reviewCount, rating, null)
 }

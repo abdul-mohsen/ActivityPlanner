@@ -19,8 +19,10 @@ import timber.log.Timber
 class HomeViewModel : ViewModel() {
 
     private lateinit var location: LatLng
-    private var getData = BusinessRepository.allBusiness
+    var selectedDate: String = "2020-12-26 00:00"
     private var onMoveScreenJob: Job? = null
+    private var onDateChangeJob: Job? = null
+    private var weatherJob: Job? = null
 
     private val _businessList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
     val businessList: StateFlow<List<Business>> = _businessList
@@ -39,30 +41,17 @@ class HomeViewModel : ViewModel() {
                 searchHistoryList = list.map { it.query }
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            getData.collect { list ->
-                _businessList.emit(
-                    list.map { business ->
-                        Timber.d("$business")
-                        BusinessRepository.getFullBusinessInfo(
-                            BusinessRepository.getById(
-                                business.id
-                            )
-                        )
-                    }
-                )
-            }
-        }
     }
 
     @FlowPreview
-    private fun loadNewData(){
-        viewModelScope.launch {
+    private fun loadNewData(term: String = ""){
+        viewModelScope.launch(Dispatchers.IO) {
             val tempBusinessList = mutableListOf<Business>()
             BusinessRepository.getBusinesses(
-                term = "",
+                term = term,
                 latitude = location.latitude,
-                longitude = location.longitude
+                longitude = location.longitude,
+                pageCount = 4
             ).collect { list ->
                 tempBusinessList.addAll(list)
             }
@@ -73,19 +62,26 @@ class HomeViewModel : ViewModel() {
 
     @FlowPreview
     private suspend fun loadWeather(list: List<Business>) {
-        viewModelScope.launch {
+        weatherJob?.cancel()
+        var counter = 3
+        weatherJob = viewModelScope.launch {
             Timber.d("$list")
             WeatherRepository.getWeather(list).collect{ list ->
                 try {
+                    Timber.d("  ${list.first().businessId }  ${ _businessList.value.map {it.id}}")
                     _businessList.value.first { it.id == list.first().businessId }
-                        .weatherTimeMap.putAll(list.map { it.time to it }.toMap())
+                        .weather = list.first { it.time == selectedDate }
                     Timber.d("new Weather data")
-                    _weatherDataState.emit(WeatherDataState.NewData)
+                    if (counter > 0 ){
+                        counter--
+                        _weatherDataState.emit(WeatherDataState.NewTemp)
+                    } else
+                        _weatherDataState.emit(WeatherDataState.NewData)
                 } catch (e: Exception) {
                     Timber.d(e)
                 }
-
             }
+            _weatherDataState.emit(WeatherDataState.NewTemp)
         }
     }
 
@@ -132,43 +128,50 @@ class HomeViewModel : ViewModel() {
         onMoveScreenJob = viewModelScope.launch(Dispatchers.IO) {
             location = latLng
             delay(500)
-
-            val temp = BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude)
-            Timber.d("$temp  +++_+_+_+_")
-            if (temp.isEmpty()) {
-                delay(1000)
-                Timber.d("Going online")
-                loadNewData()
+            BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude).collect { list ->
+                Timber.d("New call for data")
+                if (list.isEmpty()) {
+                    delay(1000)
+                    Timber.d("Going to the internet")
+                    loadNewData()
+                }
+                else updateDate(list.toMutableList() )
+//                else updateDate(list.map { business ->
+//                Timber.d("$business")
+//                BusinessRepository.getFullBusinessInfo(BusinessRepository.getById(business.id))
+//            }.toMutableList() )
             }
-            else _businessList.emit(temp)
         }
     }
 
     @FlowPreview
-    suspend fun updateData(businesses: MutableList<Business>, date: String = "2020-12-25 00:00") {
-        val queryWeatherList = businesses.filter { it.weatherTimeMap[date] == null }
-        val ids = queryWeatherList.map { it.id }
-        Timber.d("$ids , $date")
-        val output = WeatherRepository.allWeatherByBusinessIdAndDate(ids, date)
-        Timber.d("Here is the real problem")
-        Timber.d("$output")
-        output.forEach { weather ->
-            queryWeatherList.first { business ->
-                business.id == weather.businessId
-            }.weatherTimeMap[date] = weather
+    fun updateDate(
+        businesses: MutableList<Business> = businessList.value.toMutableList(),
+        date: String = selectedDate,
+        targetState: WeatherDataState = WeatherDataState.NewData
+    ) {
+        onDateChangeJob?.cancel()
+        selectedDate = date
+        onDateChangeJob = viewModelScope.launch(Dispatchers.Default) {
+            val oldWeatherList = businesses.filter { it.weather == null || it.weather!!.time != date }
+            val ids = oldWeatherList.map { it.id }
+            Timber.d("$ids , $date")
+            val sqlWeatherList = WeatherRepository.allWeatherByBusinessIdAndDate(ids, date)
+            Timber.d("Here is the real problem")
+            Timber.d("$sqlWeatherList")
+            sqlWeatherList.forEach { weather ->
+                businesses.first { business ->
+                    business.id == weather.businessId
+                }.weather = weather
+            }
+
+            _businessList.emit(businesses)
+            Timber.d("some complicated shit is going on here")
+            Timber.d("${businesses.map { it.weather }}")
+            _weatherDataState.emit(targetState)
+
+            val needInternet = businesses.filter { it.weather == null || it.weather!!.time != date }
+            if (needInternet.isNotEmpty()) loadWeather(needInternet)
         }
-
-        queryWeatherList.filter { it.weatherTimeMap[date] != null }.forEach { business ->
-            businesses.first { it.id == business.id }.weatherTimeMap[date] = business.weatherTimeMap[date]!!
-        }
-
-        _businessList.emit(businesses)
-        Timber.d("some complicated shit is going on here")
-        Timber.d("${queryWeatherList.map { it.weatherTimeMap }}")
-        _weatherDataState.emit(WeatherDataState.NewData)
-
-        val needInternet = queryWeatherList.filter { it.weatherTimeMap[date] == null }
-        if (needInternet.isNotEmpty()) loadWeather(needInternet)
     }
-
 }
