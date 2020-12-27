@@ -8,7 +8,6 @@ interface WeatherAPI {
 
     @GET("forecast.json")
     suspend fun getWeatherAtLocation(
-        @Query("key") key: String = "",
         @Query("q") query: String = "",
         @Query("hour") hour: String = "",
         @Query("dt") startDate: String = ""

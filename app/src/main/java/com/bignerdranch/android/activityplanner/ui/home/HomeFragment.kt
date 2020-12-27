@@ -14,6 +14,7 @@ import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.coroutineScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SnapHelper
@@ -49,6 +50,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 import java.lang.Exception
+import java.util.*
 
 class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private lateinit var mapView: MapView
@@ -94,16 +96,28 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
                 else -> View.GONE
             }
         }
-        binding.slider.addOnChangeListener { _, value, _ ->
-            val input = value.toInt().toString()
-            val output =
-                if (input.length < 2) "0$input"
-                else input
-            val output2 = "2020-12-26 $output:00"
-            homeViewModel.updateDate(date = output2, targetState = WeatherDataState.NewTemp)
-            binding.timeText.text = output2
-            Timber.d("$output ____________________")
 
+        binding.timeText.setOnClickListener {
+            findNavController().navigate(
+                HomeFragmentDirections.actionNavigationHomeToDatePickerFragment(
+                    Date = homeViewModel.selectedDate.value.time,
+                    Key = DATE_KEY)
+            )
+        }
+        findNavController().currentBackStackEntry?.savedStateHandle?.apply {
+            getLiveData<Long>(DATE_KEY).observe(
+                viewLifecycleOwner,
+                {date ->
+                    homeViewModel.updateDate(date = homeViewModel.addHoursToDate(Date(date)))
+                }
+            )
+        }
+
+        binding.slider.addOnChangeListener { _, value, _ ->
+            val cal = Calendar.getInstance()
+            cal.time = homeViewModel.selectedDate.value
+            cal.set(Calendar.HOUR_OF_DAY, value.toInt())
+            homeViewModel.updateDate(date = cal.time, targetState = WeatherDataState.NewTemp)
         }
         binding.businessSearch.addTextChangedListener(
             onTextChanged = { _, _, _, _ ->
@@ -129,6 +143,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         observeBusinessList()
         observeWeatherDataState()
         observeAutoCompleteList()
+        observeDate()
 
         return binding.root
     }
@@ -185,6 +200,14 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         }
     }
 
+    private fun observeDate() {
+        lifecycle.coroutineScope.launchWhenStarted {
+            homeViewModel.selectedDate.collect { date ->
+                binding.timeText.text = homeViewModel.shortDate
+            }
+        }
+    }
+
     @FlowPreview
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
@@ -215,7 +238,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
             enableLocationComponent(it, requireActivity())
             it.doThings(featureList)
         }
-
+        homeViewModel.updateLocation(mapboxMap.cameraPosition.target)
     }
 
     private fun Style.doThings(symbolLayerIconFeatureList: List<Feature>) {
@@ -349,5 +372,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         private const val SOURCE_ID = "SOURCE_ID"
         private const val ICON_ID = "ICON_ID"
         private const val LAYER_ID = "LAYER_ID"
+        private const val DATE_KEY = "Date"
     }
 }

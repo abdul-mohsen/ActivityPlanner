@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id "kotlin-kapt"
+    id "androidx.navigation.safeargs.kotlin"
 }
 
 def PropertiesFile = rootProject.file("local.properties")
@@ -79,9 +80,5 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-android-telemetry:6.1.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-core:3.1.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.6.7'
-
-
-
-
 
 }

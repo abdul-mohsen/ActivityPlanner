@@ -27,11 +27,13 @@ object WeatherRepository {
     
     @FlowPreview
     suspend fun getWeather(
-        businessList :List<Business>
+        businessList :List<Business>,
+        startDate: String
     ): Flow<List<Weather>> = businessList.asFlow().flatMapMerge(concurrency = 4) { business ->
         flow {
             val weatherList: List<Weather> = webClient.getWeatherAtLocation(
-                    query = "${business.coordinates.latitude},${business.coordinates.longitude}"
+                query = "${business.coordinates.latitude},${business.coordinates.longitude}",
+                startDate = startDate
                 ).toList().also { list ->
                     list.map { weather -> weather.businessId = business.id }
                     Timber.d("This is from the internet")

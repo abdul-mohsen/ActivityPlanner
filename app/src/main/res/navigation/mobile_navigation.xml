@@ -9,7 +9,11 @@
         android:id="@+id/navigation_home"
         android:name="com.bignerdranch.android.activityplanner.ui.home.HomeFragment"
         android:label="@string/title_home"
-        tools:layout="@layout/fragment_home" />
+        tools:layout="@layout/fragment_home" >
+        <action
+            android:id="@+id/action_navigation_home_to_datePickerFragment"
+            app:destination="@id/datePickerFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/navigation_dashboard"
@@ -22,4 +26,15 @@
         android:name="com.bignerdranch.android.activityplanner.ui.notifications.NotificationsFragment"
         android:label="@string/title_notifications"
         tools:layout="@layout/fragment_notifications" />
+    <dialog
+        android:id="@+id/datePickerFragment"
+        android:name="com.bignerdranch.android.activityplanner.ui.home.DatePickerFragment"
+        android:label="DatePickerFragment" >
+        <argument
+            android:name="Date"
+            app:argType="long" />
+        <argument
+            android:name="Key"
+            app:argType="string" />
+    </dialog>
 </navigation>

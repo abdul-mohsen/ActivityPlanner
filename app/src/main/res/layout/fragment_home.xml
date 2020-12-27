@@ -53,18 +53,17 @@
         app:layout_constraintEnd_toStartOf="@id/button"
         android:visibility="gone">
 
-        <TextView
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/time_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            tools:text="The time is"/>
+            android:textSize="12sp"
+            tools:text="2020-12-26"/>
 
         <com.google.android.material.slider.Slider
             android:id="@+id/slider"
             android:layout_width="200dp"
             android:layout_height="wrap_content"
-            android:rotation="180"
             android:stepSize="1"
             android:valueFrom="0"
             android:valueTo="23"

@@ -1,5 +1,6 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
+import android.text.format.DateFormat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
@@ -15,11 +16,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import timber.log.Timber
+import java.util.*
 
 class HomeViewModel : ViewModel() {
 
     private lateinit var location: LatLng
-    var selectedDate: String = "2020-12-26 00:00"
+//    var selectedDate: String = "2020-12-26 00:00"
     private var onMoveScreenJob: Job? = null
     private var onDateChangeJob: Job? = null
     private var weatherJob: Job? = null
@@ -32,6 +34,13 @@ class HomeViewModel : ViewModel() {
 
     private val _autoCompleteFlow: MutableStateFlow<AutoComplete> = MutableStateFlow(AutoComplete())
     val autoCompleteFlow: StateFlow<AutoComplete> = _autoCompleteFlow
+
+    private val _selectedDate: MutableStateFlow<Date> = MutableStateFlow(Date())
+    val selectedDate: StateFlow<Date> = _selectedDate
+    val fullDate: String
+        get() = DateFormat.format(FULL_DATE_FORMAT ,selectedDate.value).toString()
+    val shortDate: String
+        get() = DateFormat.format(DATE_FORMAT ,selectedDate.value).toString()
 
     var searchHistoryList: List<String> = emptyList()
 
@@ -66,11 +75,11 @@ class HomeViewModel : ViewModel() {
         var counter = 3
         weatherJob = viewModelScope.launch {
             Timber.d("$list")
-            WeatherRepository.getWeather(list).collect{ list ->
+            WeatherRepository.getWeather(list, shortDate).collect{ list ->
                 try {
                     Timber.d("  ${list.first().businessId }  ${ _businessList.value.map {it.id}}")
                     _businessList.value.first { it.id == list.first().businessId }
-                        .weather = list.first { it.time == selectedDate }
+                        .weather = list.first { it.time == fullDate }
                     Timber.d("new Weather data")
                     if (counter > 0 ){
                         counter--
@@ -147,16 +156,17 @@ class HomeViewModel : ViewModel() {
     @FlowPreview
     fun updateDate(
         businesses: MutableList<Business> = businessList.value.toMutableList(),
-        date: String = selectedDate,
+        date: Date = _selectedDate.value,
         targetState: WeatherDataState = WeatherDataState.NewData
     ) {
         onDateChangeJob?.cancel()
-        selectedDate = date
         onDateChangeJob = viewModelScope.launch(Dispatchers.Default) {
-            val oldWeatherList = businesses.filter { it.weather == null || it.weather!!.time != date }
+            _selectedDate.emit(date)
+            val fullDate = DateFormat.format(FULL_DATE_FORMAT ,date).toString()
+            val oldWeatherList = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
             val ids = oldWeatherList.map { it.id }
             Timber.d("$ids , $date")
-            val sqlWeatherList = WeatherRepository.allWeatherByBusinessIdAndDate(ids, date)
+            val sqlWeatherList = WeatherRepository.allWeatherByBusinessIdAndDate(ids, fullDate)
             Timber.d("Here is the real problem")
             Timber.d("$sqlWeatherList")
             sqlWeatherList.forEach { weather ->
@@ -170,8 +180,22 @@ class HomeViewModel : ViewModel() {
             Timber.d("${businesses.map { it.weather }}")
             _weatherDataState.emit(targetState)
 
-            val needInternet = businesses.filter { it.weather == null || it.weather!!.time != date }
+            val needInternet = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
             if (needInternet.isNotEmpty()) loadWeather(needInternet)
         }
+    }
+
+    fun addHoursToDate(date: Date): Date {
+        val cal = Calendar.getInstance()
+        cal.time = date
+        val cal2 = Calendar.getInstance()
+        cal2.time = selectedDate.value
+        cal.set(Calendar.HOUR_OF_DAY, cal2.get(Calendar.HOUR_OF_DAY))
+        return cal.time
+    }
+
+    companion object {
+        private const val DATE_FORMAT = "yyyy-MM-dd"
+        private const val FULL_DATE_FORMAT = "yyyy-MM-dd HH:00"
     }
 }
