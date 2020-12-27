@@ -16,8 +16,8 @@ interface BusinessCategoriesDao {
     fun getAll(): Flow<List<BusinessWithCategories>>
 
     @Transaction
-    @Query("SELECT * FROM business_table Where businessId = (:id)")
-    suspend fun getByBusinessId(id: String): BusinessWithCategories
+    @Query("SELECT * FROM business_table Where businessId in (:ids)")
+    suspend fun getByBusinessesId(ids: List<String>): List<BusinessWithCategories>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(vararg x: BusinessCategory)

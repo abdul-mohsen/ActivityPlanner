@@ -51,9 +51,8 @@ import timber.log.Timber
 import java.lang.Exception
 import java.util.*
 
-class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
+class HomeFragment : Fragment(), OnMapReadyCallback {
     private lateinit var mapView: MapView
-    private var permissionsManager: PermissionsManager = PermissionsManager(this)
     private lateinit var mapboxMap: MapboxMap
     private val homeViewModel: HomeViewModel by lazy { ViewModelProvider(this).get(HomeViewModel::class.java) }
     private lateinit var binding: FragmentHomeBinding
@@ -142,11 +141,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
             homeViewModel.businessList.collect { list ->
                 homeViewModel.updateDate(list.toMutableList())
 
-//                featureList = list.map { Feature.fromGeometry(
-//                    Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude)
-//                ) }
-//                if (isMapReady)
-//                    mapboxMap.getStyle { it.doThings(featureList) }
+                featureList = list.map { Feature.fromGeometry(
+                    Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude)
+                ) }
+                if (isMapReady)
+                    mapboxMap.run {
+                        getStyle { it.doThings(featureList) }
+                        mapboxMap.animateCamera { CameraPosition.Builder()
+                            .target(LatLng(list.first().coordinates.latitude,list.first().coordinates.longitude))
+                            .zoom(10.0)
+                            .tilt(20.0)
+                            .build()
+                        }
+                    }
             }
         }
     }
@@ -230,7 +237,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         Timber.d("I have been called")
         mapboxMap.setStyle(Style.MAPBOX_STREETS) {
             // Map is set up and the style has loaded. Now you can add data or make other map adjustments
-            enableLocationComponent(it, requireActivity())
             it.doThings(featureList)
         }
         homeViewModel.updateLocation(mapboxMap.cameraPosition.target)
@@ -253,67 +259,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
                     iconAllowOverlap(true)
                 )
             )
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun enableLocationComponent(loadedMapStyle: Style, activity: Activity) {
-        // Check if permissions are enabled and if not request
-        if (PermissionsManager.areLocationPermissionsGranted(activity)) {
-            // Create and customize the LocationComponent's options
-            val customLocationComponentOptions = LocationComponentOptions.builder(activity)
-                .trackingGesturesManagement(true)
-                .accuracyColor(ContextCompat.getColor(activity, R.color.mapboxGreen))
-                .build()
-            val locationComponentActivationOptions = LocationComponentActivationOptions.builder(
-                activity,
-                loadedMapStyle
-            )
-                .locationComponentOptions(customLocationComponentOptions)
-                .build()
-            // Get an instance of the LocationComponent and then adjust its settings
-            mapboxMap.locationComponent.apply {
-                // Activate the LocationComponent with options
-                activateLocationComponent(locationComponentActivationOptions)
-                // Enable to make the LocationComponent visible
-                isLocationComponentEnabled = true
-                // Set the LocationComponent's camera mode
-                cameraMode = CameraMode.TRACKING
-                // Set the LocationComponent's render mode
-                renderMode = RenderMode.COMPASS
-            }
-        } else {
-            permissionsManager = PermissionsManager(this)
-            permissionsManager.requestLocationPermissions(activity)
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        permissionsManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    }
-
-    override fun onExplanationNeeded(permissionsToExplain: List<String>) {
-        Toast.makeText(
-            requireContext(),
-            R.string.user_location_permission_explanation,
-            Toast.LENGTH_LONG
-        ).show()
-    }
-
-    override fun onPermissionResult(granted: Boolean) {
-        if (granted) {
-            enableLocationComponent(mapboxMap.style!!, requireActivity())
-        } else {
-            Toast.makeText(
-                activity,
-                R.string.user_location_permission_not_granted,
-                Toast.LENGTH_LONG
-            ).show()
-//            finish()
         }
     }
 

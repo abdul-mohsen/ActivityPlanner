@@ -9,7 +9,7 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/business_card"
         android:layout_width="wrap_content"
-        android:layout_height="256dp"
+        android:layout_height="match_parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -17,7 +17,7 @@
         app:cardCornerRadius="8dp">
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
             <ImageView
@@ -56,8 +56,6 @@
                     android:layout_marginEnd="8dp"/>
             </LinearLayout>
 
-
-
             <LinearLayout
                 android:id="@+id/rate_layout"
                 android:layout_width="match_parent"
@@ -65,7 +63,8 @@
                 android:orientation="horizontal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintBottom_toBottomOf="@id/business_image"
-                android:background="@color/purple_500">
+                android:background="@color/light_gray"
+                android:padding="2dp">
 
                 <ImageView
                     android:id="@+id/rate_image"
@@ -86,27 +85,63 @@
             </LinearLayout>
 
             <TextView
+                android:layout_marginTop="8dp"
                 android:id="@+id/business_name"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/business_image"
-                tools:text="business name"
+                android:layout_marginStart="2dp"
+                tools:text="business name333333333"
                 android:textStyle="bold"
-                android:maxLength="16"
-                android:ellipsize="end"/>
+                android:maxLength="14"
+                android:ellipsize="end"
+                android:textSize="18sp"/>
 
-            <com.google.android.material.button.MaterialButton
+            <TextView
+                android:layout_marginTop="8dp"
+                android:id="@+id/price"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                app:layout_constraintStart_toEndOf="@id/business_name"
+                app:layout_constraintTop_toBottomOf="@id/business_image"
+                android:textSize="18sp"
+                tools:text="$$$$"/>
+
+            <TextView
+                android:id="@+id/category_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="italic"
+                app:layout_constraintTop_toBottomOf="@+id/business_name"
+                app:layout_constraintStart_toStartOf="parent"
+                android:maxLength="23"
+                android:layout_marginStart="2dp"
+                tools:text="helloddddddddddddddddddddddd"
+                android:maxLines="2"/>
+
+            <TextView
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="2dp"
+                android:id="@+id/condition"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/category_list"
+                android:maxLength="16"
+                android:ellipsize="start"
+                tools:text="helpdddddddddddddddddddddddd"/>
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_add"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toEndOf="@+id/rate_layout"
-                app:layout_constraintTop_toBottomOf="@id/business_image"
                 android:layout_marginLeft="8dp"
                 android:layout_marginRight="8dp"
-                android:layout_marginBottom="8dp"
-                android:text="Add" />
+                android:layout_marginBottom="8dp"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

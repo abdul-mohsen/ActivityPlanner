@@ -11,5 +11,5 @@ data class BusinessWithCategories(
         entityColumn = "categoryId",
         associateBy = Junction(BusinessCategory::class)
     )
-    val categories: List<BusinessCategory>
+    val categories: List<Category>
 )

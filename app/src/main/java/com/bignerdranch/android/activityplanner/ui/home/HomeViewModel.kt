@@ -14,10 +14,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.pow
 
 class HomeViewModel : ViewModel() {
+    var ioDispatcher = Dispatchers.IO
+    var cpuDispatcher = Dispatchers.Default
 
-    private lateinit var location: LatLng
+    private var location: LatLng = LatLng(tempLat, tempLon)
     private var onMoveScreenJob: Job? = null
     private var onDateChangeJob: Job? = null
     private var weatherJob: Job? = null
@@ -42,7 +46,7 @@ class HomeViewModel : ViewModel() {
     var searchHistoryList: List<String> = emptyList()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             SearchHistoryRepository.allSearchHistory.collect { list ->
                 searchHistoryList = list.map { it.query }
             }
@@ -51,7 +55,7 @@ class HomeViewModel : ViewModel() {
 
     @FlowPreview
     private fun loadNewData(term: String = ""){
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val tempBusinessList = mutableListOf<Business>()
             BusinessRepository.getBusinesses(
                 term = term,
@@ -74,7 +78,7 @@ class HomeViewModel : ViewModel() {
     private suspend fun loadWeather(list: List<Business>) {
         weatherJob?.cancel()
         var counter = 3
-        weatherJob = viewModelScope.launch {
+        weatherJob = viewModelScope.launch(ioDispatcher) {
             Timber.d("$list")
             WeatherRepository.getWeather(list, shortDate).collect{ list ->
                 try {
@@ -98,7 +102,7 @@ class HomeViewModel : ViewModel() {
 
     @FlowPreview
     fun autoComplete(query: String) {
-        autoCompeteJob = viewModelScope.launch(Dispatchers.IO) {
+        autoCompeteJob = viewModelScope.launch(ioDispatcher) {
             if (query.isBlank())
                 _autoCompleteFlow.emit(searchHistoryList.toSet().toList())
             else BusinessRepository.autoComplete(
@@ -125,46 +129,53 @@ class HomeViewModel : ViewModel() {
 
     @FlowPreview
     fun searchAPI(query: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             updateDataState(DataState.Updating)
             SearchHistoryRepository.insert(SearchHistory(query = query))
-            viewModelScope.launch(Dispatchers.IO) {
-                val businesses = mutableListOf<Business>()
-                BusinessRepository.getBusinesses(
-                    term = query,
-                    latitude = location.latitude,
-                    longitude = location.longitude
-                ).collect { list ->
-                    businesses.addAll(list)
-                }
-                if (businesses.isNotEmpty()) updateDate(businesses = businesses)
-                else _dataState.emit(DataState.NoBusinessMatch)
+            val businesses = mutableListOf<Business>()
+            BusinessRepository.getBusinesses(
+                term = query,
+                latitude = location.latitude,
+                longitude = location.longitude
+            ).collect { list ->
+                businesses.addAll(list)
             }
+            if (businesses.isNotEmpty()) updateDate(businesses = businesses)
+            else _dataState.emit(DataState.NoBusinessMatch)
         }
     }
 
     @FlowPreview
     fun updateLocation(latLng: LatLng) {
+        if (isDiffBig(latLng, 0.225)) return
+
         onMoveScreenJob?.cancel()
-        onMoveScreenJob = viewModelScope.launch(Dispatchers.IO) {
+        onMoveScreenJob = viewModelScope.launch(ioDispatcher) {
             updateDataState(DataState.Updating)
             location = latLng
             delay(500)
             BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude).collect { list ->
                 Timber.d("New call for data")
                 if (list.isEmpty()) {
-                    delay(1000)
                     Timber.d("Going to the internet")
                     loadNewData()
                 }
-                else updateDate(list.toMutableList() )
-//                else updateDate(list.map { business ->
-//                Timber.d("$business")
-//                BusinessRepository.getFullBusinessInfo(BusinessRepository.getById(business.id))
-//            }.toMutableList() )
+                else {
+                    val listBusinessWithCategories = BusinessRepository.getFullBusinessInfo(list.map { it.id })
+                    listBusinessWithCategories.forEach { businessWithCategories ->
+                        list.first { it.id == businessWithCategories.business.id }
+                            .categories = businessWithCategories.categories
+                    }
+                    updateDate(list.toMutableList())
+                }
             }
         }
     }
+
+    private fun isDiffBig(latLng: LatLng, theashHold: Double) =
+        (latLng.altitude - location.altitude).pow(2) + (latLng.longitude - location.longitude).pow(2) * cos(
+            Math.toRadians(latLng.altitude)
+        ).pow(2) < theashHold
 
     @FlowPreview
     fun updateDate(
@@ -174,7 +185,7 @@ class HomeViewModel : ViewModel() {
     ) {
         if (businesses.size == 0) return
         onDateChangeJob?.cancel()
-        onDateChangeJob = viewModelScope.launch(Dispatchers.Default) {
+        onDateChangeJob = viewModelScope.launch(cpuDispatcher) {
             updateDataState(DataState.Updating)
             _selectedDate.emit(date)
             val fullDate = DateFormat.format(FULL_DATE_FORMAT ,date).toString()
@@ -219,5 +230,7 @@ class HomeViewModel : ViewModel() {
     companion object {
         private const val DATE_FORMAT = "yyyy-MM-dd"
         private const val FULL_DATE_FORMAT = "yyyy-MM-dd HH:00"
+        private const val tempLat = 0.0
+        private const val tempLon = 0.0
     }
 }

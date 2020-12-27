@@ -23,24 +23,35 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
 
     override fun onBindViewHolder(holder: AutoFillViewHolder, position: Int) {
         val item = getItem(position)
+        var categories =  ""
+        for (index in item.categories.indices) {
+            categories += item.categories[index].name
+            if (index == item.categories.size -1) break
+            categories += " • "
+        }
         holder.bind(
             item.name,
             item.imageUrl,
             item.weather?.tempC.toString(),
             "(${item.reviewCount})",
             ratingToResourceId(item.rating),
-            "https:${item.weather?.condition?.icon}"
+            "https:${item.weather?.condition?.icon}",
+            categories,
+            item.price,
+            item.weather?.condition?.text.toString()
         )
     }
 
     inner class AutoFillViewHolder(private val bindingHolder: BusinessItemBinding):
         RecyclerView.ViewHolder(bindingHolder.root) {
 
-        fun bind(option: String, url: String, temp: String, reviewCount: String, imageResource: Int, weatherUrl: String) {
-            bindingHolder.businessName.text = option
+        fun bind(name: String, url: String, temp: String, reviewCount: String, imageResource: Int, weatherUrl: String, categories: String, price: String, condition: String) {
+            bindingHolder.businessName.text = name.replace("\\s+".toRegex(), " ")
             bindingHolder.weatherTemp.text = "${temp}°C"
             bindingHolder.reviewCount.text = reviewCount
-            bindingHolder.weatherImage
+            bindingHolder.categoryList.text = categories
+            bindingHolder.price.text = price
+            bindingHolder.condition.text = condition
             Picasso.get().load(weatherUrl)
                 .fit()
                 .centerInside()

@@ -26,16 +26,9 @@ object BusinessRepository {
 
     private fun cal(lat: Double): Double = cos(Math.toRadians(lat)).pow(2)
 
-    suspend fun getById(id: String) = businessCategoriesDao.getByBusinessId(id)
+    suspend fun getFullBusinessInfo(ids: List<String>): List<BusinessWithCategories> =
+        businessCategoriesDao.getByBusinessesId(ids)
 
-    suspend fun getFullBusinessInfo(businessWithCategories: BusinessWithCategories): Business =
-        businessWithCategories.business.also { business ->
-            Timber.d("$businessWithCategories")
-            Timber.d("$business  __  ${businessWithCategories.categories}")
-            business.categories = categoryDao.getById(
-                *businessWithCategories.categories.map { it.categoryId }
-            )
-        }
 
     private suspend fun insertWithCategories(businesses: List<Business>) {
         val businessCategory: MutableSet<BusinessCategory> = mutableSetOf()
