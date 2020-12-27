@@ -6,10 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.Repo.BusinessRepository
 import com.bignerdranch.android.activityplanner.Repo.SearchHistoryRepository
 import com.bignerdranch.android.activityplanner.Repo.WeatherRepository
-import com.bignerdranch.android.activityplanner.model.AutoComplete
-import com.bignerdranch.android.activityplanner.model.Business
-import com.bignerdranch.android.activityplanner.model.SearchHistory
-import com.bignerdranch.android.activityplanner.model.WeatherDataState
+import com.bignerdranch.android.activityplanner.model.*
 import com.mapbox.mapboxsdk.geometry.LatLng
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,23 +18,23 @@ import java.util.*
 class HomeViewModel : ViewModel() {
 
     private lateinit var location: LatLng
-//    var selectedDate: String = "2020-12-26 00:00"
     private var onMoveScreenJob: Job? = null
     private var onDateChangeJob: Job? = null
     private var weatherJob: Job? = null
+    private var autoCompeteJob: Job? = null
 
     private val _businessList: MutableStateFlow<List<Business>> = MutableStateFlow(emptyList())
     val businessList: StateFlow<List<Business>> = _businessList
 
-    private val _weatherDataState: MutableStateFlow<WeatherDataState> = MutableStateFlow(WeatherDataState.Idle)
-    val weatherDataState: StateFlow<WeatherDataState> = _weatherDataState
+    private val _dataState: MutableStateFlow<DataState> = MutableStateFlow(DataState.Idle)
+    val dataState: StateFlow<DataState> = _dataState
 
-    private val _autoCompleteFlow: MutableStateFlow<AutoComplete> = MutableStateFlow(AutoComplete())
-    val autoCompleteFlow: StateFlow<AutoComplete> = _autoCompleteFlow
+    private val _autoCompleteFlow: MutableStateFlow<List<String>> = MutableStateFlow(listOf())
+    val autoCompleteFlow: StateFlow<List<String>> = _autoCompleteFlow
 
     private val _selectedDate: MutableStateFlow<Date> = MutableStateFlow(Date())
     val selectedDate: StateFlow<Date> = _selectedDate
-    val fullDate: String
+    private val fullDate: String
         get() = DateFormat.format(FULL_DATE_FORMAT ,selectedDate.value).toString()
     val shortDate: String
         get() = DateFormat.format(DATE_FORMAT ,selectedDate.value).toString()
@@ -64,8 +61,12 @@ class HomeViewModel : ViewModel() {
             ).collect { list ->
                 tempBusinessList.addAll(list)
             }
-            Timber.d("A new list have been loaded $tempBusinessList")
-            BusinessRepository.insert(tempBusinessList)
+            if (tempBusinessList.size == 0 ) {
+                updateDataState(DataState.NoBusinessMatch)
+            } else {
+                Timber.d("A new list have been loaded $tempBusinessList")
+                BusinessRepository.insert(tempBusinessList)
+            }
         }
     }
 
@@ -83,51 +84,62 @@ class HomeViewModel : ViewModel() {
                     Timber.d("new Weather data")
                     if (counter > 0 ){
                         counter--
-                        _weatherDataState.emit(WeatherDataState.NewTemp)
+                        _dataState.emit(DataState.NewWeatherData)
                     } else
-                        _weatherDataState.emit(WeatherDataState.NewData)
+                        _dataState.emit(DataState.NewBusinessData)
                 } catch (e: Exception) {
                     Timber.d(e)
                 }
             }
-            _weatherDataState.emit(WeatherDataState.NewTemp)
+            if (counter == 3) updateDataState(DataState.NoWeatherData)
+            else updateDataState(DataState.NewWeatherData)
         }
     }
 
     @FlowPreview
     fun autoComplete(query: String) {
-        viewModelScope.launch {
-            BusinessRepository.autoComplete(
+        autoCompeteJob = viewModelScope.launch(Dispatchers.IO) {
+            if (query.isBlank())
+                _autoCompleteFlow.emit(searchHistoryList.toSet().toList())
+            else BusinessRepository.autoComplete(
                 text = query,
                 latitude = location.latitude,
                 longitude = location.longitude
             ).collect { autoComplete ->
                 Timber.d("This is a test stay a way $autoComplete")
-                _autoCompleteFlow.emit(autoComplete)
+                _autoCompleteFlow.emit(getListOfAutoComplete(autoComplete))
             }
         }
     }
 
-    fun getListOfAutoComplete(autoComplete: AutoComplete): List<String> = autoComplete
+    private fun getListOfAutoComplete(autoComplete: AutoComplete): List<String> = autoComplete
         .run {  mutableListOf<String>().apply {
             addAll(businesses)
             addAll(terms)
             addAll(categories)
         } }.toSet().toList().also { Timber.d("$it") }
 
-    suspend fun updateWeatherDataState(state: WeatherDataState) {
-        _weatherDataState.emit(state)
+    suspend fun updateDataState(state: DataState) {
+        _dataState.emit(state)
     }
 
     @FlowPreview
     fun searchAPI(query: String) {
         viewModelScope.launch {
+            updateDataState(DataState.Updating)
             SearchHistoryRepository.insert(SearchHistory(query = query))
-            BusinessRepository.getBusinesses(
-                term = query,
-                latitude = location.latitude,
-                longitude = location.longitude
-            )
+            viewModelScope.launch(Dispatchers.IO) {
+                val businesses = mutableListOf<Business>()
+                BusinessRepository.getBusinesses(
+                    term = query,
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                ).collect { list ->
+                    businesses.addAll(list)
+                }
+                if (businesses.isNotEmpty()) updateDate(businesses = businesses)
+                else _dataState.emit(DataState.NoBusinessMatch)
+            }
         }
     }
 
@@ -135,6 +147,7 @@ class HomeViewModel : ViewModel() {
     fun updateLocation(latLng: LatLng) {
         onMoveScreenJob?.cancel()
         onMoveScreenJob = viewModelScope.launch(Dispatchers.IO) {
+            updateDataState(DataState.Updating)
             location = latLng
             delay(500)
             BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude).collect { list ->
@@ -157,10 +170,12 @@ class HomeViewModel : ViewModel() {
     fun updateDate(
         businesses: MutableList<Business> = businessList.value.toMutableList(),
         date: Date = _selectedDate.value,
-        targetState: WeatherDataState = WeatherDataState.NewData
+        targetState: DataState = DataState.NewBusinessData
     ) {
+        if (businesses.size == 0) return
         onDateChangeJob?.cancel()
         onDateChangeJob = viewModelScope.launch(Dispatchers.Default) {
+            updateDataState(DataState.Updating)
             _selectedDate.emit(date)
             val fullDate = DateFormat.format(FULL_DATE_FORMAT ,date).toString()
             val oldWeatherList = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
@@ -178,7 +193,7 @@ class HomeViewModel : ViewModel() {
             _businessList.emit(businesses)
             Timber.d("some complicated shit is going on here")
             Timber.d("${businesses.map { it.weather }}")
-            _weatherDataState.emit(targetState)
+            updateDataState(targetState)
 
             val needInternet = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
             if (needInternet.isNotEmpty()) loadWeather(needInternet)
@@ -191,6 +206,13 @@ class HomeViewModel : ViewModel() {
         val cal2 = Calendar.getInstance()
         cal2.time = selectedDate.value
         cal.set(Calendar.HOUR_OF_DAY, cal2.get(Calendar.HOUR_OF_DAY))
+        return cal.time
+    }
+
+    fun addHoursToDate(value: Float): Date {
+        val cal = Calendar.getInstance()
+        cal.time = selectedDate.value
+        cal.set(Calendar.HOUR_OF_DAY, value.toInt())
         return cal.time
     }
 

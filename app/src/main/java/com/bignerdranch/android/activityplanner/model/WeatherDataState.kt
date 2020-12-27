@@ -1,7 +1,10 @@
 package com.bignerdranch.android.activityplanner.model
 
-enum class WeatherDataState {
+enum class DataState {
     Idle,
-    NewData,
-    NewTemp
+    NewBusinessData,
+    NewWeatherData,
+    NoBusinessMatch,
+    NoWeatherData,
+    Updating
 }

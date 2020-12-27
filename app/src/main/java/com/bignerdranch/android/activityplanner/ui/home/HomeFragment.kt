@@ -3,7 +3,6 @@ package com.bignerdranch.android.activityplanner.ui.home
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Bitmap
-import android.opengl.Visibility
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,7 +21,7 @@ import com.bignerdranch.android.activityplanner.OnSnapPositionChangeListener
 import com.bignerdranch.android.activityplanner.R
 import com.bignerdranch.android.activityplanner.SnapOnScrollListener
 import com.bignerdranch.android.activityplanner.databinding.FragmentHomeBinding
-import com.bignerdranch.android.activityplanner.model.WeatherDataState
+import com.bignerdranch.android.activityplanner.model.DataState
 import com.bignerdranch.android.activityplanner.ui.adapter.BusinessAdapter
 import com.bignerdranch.android.activityplanner.ui.adapter.MyArrayAdapter
 import com.mapbox.android.core.permissions.PermissionsListener
@@ -60,7 +59,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private lateinit var binding: FragmentHomeBinding
     private lateinit var arrayAdapter: MyArrayAdapter
     private lateinit var businessAdapter: BusinessAdapter
-    private var autoCompeteJob: Job? = null
     private lateinit var x: Bitmap
     private var featureList: List<Feature> = emptyList()
     private var isMapReady = false
@@ -79,8 +77,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        Timber.d("I have been created")
-
         binding = FragmentHomeBinding.inflate(inflater, container, false)
 
         mapView = binding.mapView
@@ -101,42 +97,34 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
             findNavController().navigate(
                 HomeFragmentDirections.actionNavigationHomeToDatePickerFragment(
                     Date = homeViewModel.selectedDate.value.time,
-                    Key = DATE_KEY)
+                    Key = DATE_KEY
+                )
             )
         }
         findNavController().currentBackStackEntry?.savedStateHandle?.apply {
             getLiveData<Long>(DATE_KEY).observe(
                 viewLifecycleOwner,
                 {date ->
-                    homeViewModel.updateDate(date = homeViewModel.addHoursToDate(Date(date)))
+                    homeViewModel.updateDate(
+                        date = homeViewModel.addHoursToDate(Date(date)),
+                        targetState = DataState.NewWeatherData
+                    )
                 }
             )
         }
 
         binding.slider.addOnChangeListener { _, value, _ ->
-            val cal = Calendar.getInstance()
-            cal.time = homeViewModel.selectedDate.value
-            cal.set(Calendar.HOUR_OF_DAY, value.toInt())
-            homeViewModel.updateDate(date = cal.time, targetState = WeatherDataState.NewTemp)
+            val date = homeViewModel.addHoursToDate(value)
+            homeViewModel.updateDate(date = date, targetState = DataState.NewWeatherData)
         }
         binding.businessSearch.addTextChangedListener(
             onTextChanged = { _, _, _, _ ->
-                autoCompeteJob?.cancel()
-                if (binding.businessSearch.text.isBlank())
-                    arrayAdapter.submit(homeViewModel.searchHistoryList.toSet().toList())
-                else
-                    autoCompeteJob = lifecycle.coroutineScope.launch {
-                        delay(1000)
-                        Timber.d("Testing the delay")
-                        homeViewModel.autoComplete(binding.businessSearch.text.toString())
-                    }
-
+                homeViewModel.autoComplete(binding.businessSearch.text.toString())
             }
         )
         arrayAdapter = MyArrayAdapter(requireContext(), R.layout.auto_fill_item)
         binding.businessSearch.setAdapter(arrayAdapter)
         binding.businessSearch.setOnItemClickListener { parent, _, position, _ ->
-            Timber.d("Yay you found what you want to search")
             homeViewModel.searchAPI(parent.getItemAtPosition(position).toString())
         }
 
@@ -152,49 +140,56 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
     private fun observeBusinessList() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.businessList.collect { list ->
-                if (list.isNotEmpty()) {
-                    if (list.first().weather == null)
-                        homeViewModel.updateDate(list.toMutableList())
+                homeViewModel.updateDate(list.toMutableList())
 
-                    featureList = list.map { Feature.fromGeometry(
-                        Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude)
-                    ) }
-                    if (isMapReady)
-                        mapboxMap.getStyle { it.doThings(featureList) }
-                }
+//                featureList = list.map { Feature.fromGeometry(
+//                    Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude)
+//                ) }
+//                if (isMapReady)
+//                    mapboxMap.getStyle { it.doThings(featureList) }
             }
         }
     }
 
-    @FlowPreview
     private fun observeWeatherDataState() {
         lifecycle.coroutineScope.launchWhenStarted {
-            homeViewModel.weatherDataState.collect { state ->
+            homeViewModel.dataState.collect { state ->
                 Timber.d("$state")
                 when (state) {
-                    WeatherDataState.Idle -> Timber.d("___")
-                    WeatherDataState.NewData -> {
-                        homeViewModel.updateWeatherDataState(WeatherDataState.Idle)
+                    DataState.Idle -> {
+                        Timber.d("I am Idle")
+                        binding.progressBar.visibility = View.GONE
+                    }
+                    DataState.NewBusinessData -> {
+                        homeViewModel.updateDataState(DataState.Idle)
                         businessAdapter.submitList(homeViewModel.businessList.value)
                     }
-                    WeatherDataState.NewTemp -> {
-                        homeViewModel.updateWeatherDataState(WeatherDataState.Idle)
+                    DataState.NewWeatherData -> {
+                        homeViewModel.updateDataState(DataState.Idle)
                         businessAdapter.submitList(homeViewModel.businessList.value)
                         businessAdapter.notifyDataSetChanged()
                     }
+                    DataState.NoBusinessMatch -> {
+                        Toast.makeText(requireContext(), "No business found", Toast.LENGTH_SHORT).show()
+                        homeViewModel.updateDataState(DataState.Idle)
+                    }
+                    DataState.NoWeatherData -> {
+                        Toast.makeText(requireContext(), "No weather data found", Toast.LENGTH_SHORT).show()
+                        homeViewModel.updateDataState(DataState.Idle)
+                    }
+                    DataState.Updating -> {
+                        binding.progressBar.visibility = View.VISIBLE
+                    }
                 }
             }
         }
     }
 
-    @FlowPreview
     private fun observeAutoCompleteList() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.apply {
                 autoCompleteFlow.collect { autoComplete ->
-                    val autoList = getListOfAutoComplete(autoComplete).toMutableList()
-                    Timber.d("my auto list $autoList")
-                    arrayAdapter.submit(autoList)
+                    arrayAdapter.submit(autoComplete)
                 }
             }
         }
@@ -202,7 +197,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, PermissionsListener {
 
     private fun observeDate() {
         lifecycle.coroutineScope.launchWhenStarted {
-            homeViewModel.selectedDate.collect { date ->
+            homeViewModel.selectedDate.collect {
                 binding.timeText.text = homeViewModel.shortDate
             }
         }
