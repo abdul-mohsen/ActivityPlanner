@@ -8,4 +8,5 @@
     <string name="mapbox_access_token">pk.eyJ1Ijoic3NkYXd3ZXEiLCJhIjoiY2tpcjN3bGR0MjBvYTJxbGJqcDk2emF5aiJ9.QgBU6ZqFvsFBLassDvovQA</string>
     <string name="search">Search</string>
     <string name="business_image">Business image</string>
+    <string name="add">Add</string>
 </resources>

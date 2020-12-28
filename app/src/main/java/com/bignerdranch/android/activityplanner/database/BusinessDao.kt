@@ -24,7 +24,7 @@ interface BusinessDao {
     @Update
     suspend fun update(vararg business: Business)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(vararg business: Business)
 
     @Query("DELETE FROM business_table")

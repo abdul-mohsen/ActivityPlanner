@@ -1,14 +1,12 @@
 package com.bignerdranch.android.activityplanner.ui.home
 
-import android.annotation.SuppressLint
-import android.app.Activity
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -24,18 +22,12 @@ import com.bignerdranch.android.activityplanner.databinding.FragmentHomeBinding
 import com.bignerdranch.android.activityplanner.model.DataState
 import com.bignerdranch.android.activityplanner.ui.adapter.BusinessAdapter
 import com.bignerdranch.android.activityplanner.ui.adapter.MyArrayAdapter
-import com.mapbox.android.core.permissions.PermissionsListener
-import com.mapbox.android.core.permissions.PermissionsManager
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.geometry.LatLng
-import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
-import com.mapbox.mapboxsdk.location.LocationComponentOptions
-import com.mapbox.mapboxsdk.location.modes.CameraMode
-import com.mapbox.mapboxsdk.location.modes.RenderMode
 import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
@@ -45,10 +37,11 @@ import com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.squareup.picasso.Picasso
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.lang.Exception
 import java.util.*
 
 class HomeFragment : Fragment(), OnMapReadyCallback {
@@ -58,15 +51,21 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     private lateinit var binding: FragmentHomeBinding
     private lateinit var arrayAdapter: MyArrayAdapter
     private lateinit var businessAdapter: BusinessAdapter
-    private lateinit var x: Bitmap
+    private lateinit var mapStyle: String
+    private lateinit var markerImage: Bitmap
     private var featureList: List<Feature> = emptyList()
     private var isMapReady = false
-
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Mapbox.getInstance(requireContext(), getString(R.string.mapbox_access_token))
         lifecycle.coroutineScope.launch(Dispatchers.IO) {
-            x = Picasso.get().load(R.drawable.mapbox_marker_icon_default).get()
+            markerImage = Picasso.get().load(R.drawable.mapbox_marker_icon_default).get()
+        }
+        
+        mapStyle = when(resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_YES -> Style.DARK
+            else -> Style.MAPBOX_STREETS
         }
     }
 
@@ -214,7 +213,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
         isMapReady = true
-        mapboxMap.addOnFlingListener {
+        mapboxMap.addOnCameraMoveListener {
             mapboxMap.run {
                 homeViewModel.updateLocation(cameraPosition.target)
                 Timber.d("The camera is moving ")
@@ -235,7 +234,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
             }
         }
         Timber.d("I have been called")
-        mapboxMap.setStyle(Style.MAPBOX_STREETS) {
+        mapboxMap.setStyle(mapStyle) {
             // Map is set up and the style has loaded. Now you can add data or make other map adjustments
             it.doThings(featureList)
         }
@@ -246,7 +245,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
         this.run {
             removeLayer(LAYER_ID)
             removeSource(SOURCE_ID)
-            addImage(ICON_ID, x)
+            addImage(ICON_ID, markerImage)
             addSource(
                 GeoJsonSource(
                     SOURCE_ID,

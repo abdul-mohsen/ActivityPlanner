@@ -61,8 +61,7 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
                 .fit()
                 .centerCrop()
                 .into(bindingHolder.businessImage)
-        }
-        }
+        } }
 
     class AutoFillDiffCallback: DiffUtil.ItemCallback<Business>(){
         override fun areItemsTheSame(oldItem: Business, newItem: Business): Boolean =
@@ -73,16 +72,16 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
     }
 
     private fun ratingToResourceId(input: Float) = when(input){
-        1.0f -> R.drawable.stars_small_0
-        1.5f -> R.drawable.stars_small_1_half
-        2.0f -> R.drawable.stars_small_2
-        2.5f -> R.drawable.stars_small_2_half
-        3.0f -> R.drawable.stars_small_3
-        3.5f -> R.drawable.stars_small_3_half
-        4.0f -> R.drawable.stars_small_4
-        4.5f -> R.drawable.stars_small_4_half
-        5.0f -> R.drawable.stars_small_4_half
-        else -> R.drawable.stars_small_0
+        1.0f -> R.drawable.stars_regular_0
+        1.5f -> R.drawable.stars_regular_1_half
+        2.0f -> R.drawable.stars_regular_2
+        2.5f -> R.drawable.stars_regular_2_half
+        3.0f -> R.drawable.stars_regular_3
+        3.5f -> R.drawable.stars_regular_3_half
+        4.0f -> R.drawable.stars_regular_4
+        4.5f -> R.drawable.stars_regular_4_half
+        5.0f -> R.drawable.stars_regular_4_half
+        else -> R.drawable.stars_regular_0
     }
 
 }

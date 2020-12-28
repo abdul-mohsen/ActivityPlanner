@@ -54,18 +54,18 @@ class HomeViewModel : ViewModel() {
     }
 
     @FlowPreview
-    private fun loadNewData(term: String = ""){
+    private fun loadNewData(term: String = "", latLom: LatLng){
         viewModelScope.launch(ioDispatcher) {
             val tempBusinessList = mutableListOf<Business>()
             BusinessRepository.getBusinesses(
                 term = term,
-                latitude = location.latitude,
-                longitude = location.longitude,
+                latitude = latLom.latitude,
+                longitude = latLom.longitude,
                 pageCount = 4
             ).collect { list ->
                 tempBusinessList.addAll(list)
             }
-            if (tempBusinessList.size == 0 ) {
+            if (tempBusinessList.isEmpty() ) {
                 updateDataState(DataState.NoBusinessMatch)
             } else {
                 Timber.d("A new list have been loaded $tempBusinessList")
@@ -147,20 +147,19 @@ class HomeViewModel : ViewModel() {
 
     @FlowPreview
     fun updateLocation(latLng: LatLng) {
-        if (isDiffBig(latLng, 0.225)) return
+        if (isDiffBig(latLng, 0.255)) return
 
         onMoveScreenJob?.cancel()
         onMoveScreenJob = viewModelScope.launch(ioDispatcher) {
             updateDataState(DataState.Updating)
-            location = latLng
             delay(500)
             BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude).collect { list ->
                 Timber.d("New call for data")
                 if (list.isEmpty()) {
                     Timber.d("Going to the internet")
-                    loadNewData()
-                }
-                else {
+                    loadNewData(latLom = latLng)
+                } else {
+                    location = latLng
                     val listBusinessWithCategories = BusinessRepository.getFullBusinessInfo(list.map { it.id })
                     listBusinessWithCategories.forEach { businessWithCategories ->
                         list.first { it.id == businessWithCategories.business.id }
@@ -172,10 +171,10 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    private fun isDiffBig(latLng: LatLng, theashHold: Double) =
+    private fun isDiffBig(latLng: LatLng, threshold: Double) =
         (latLng.altitude - location.altitude).pow(2) + (latLng.longitude - location.longitude).pow(2) * cos(
             Math.toRadians(latLng.altitude)
-        ).pow(2) < theashHold
+        ).pow(2) < threshold
 
     @FlowPreview
     fun updateDate(
@@ -193,18 +192,14 @@ class HomeViewModel : ViewModel() {
             val ids = oldWeatherList.map { it.id }
             Timber.d("$ids , $date")
             val sqlWeatherList = WeatherRepository.allWeatherByBusinessIdAndDate(ids, fullDate)
-            Timber.d("Here is the real problem")
             Timber.d("$sqlWeatherList")
             sqlWeatherList.forEach { weather ->
                 businesses.first { business ->
                     business.id == weather.businessId
                 }.weather = weather
             }
-
+            if (sqlWeatherList.isNotEmpty()) updateDataState(targetState)
             _businessList.emit(businesses)
-            Timber.d("some complicated shit is going on here")
-            Timber.d("${businesses.map { it.weather }}")
-            updateDataState(targetState)
 
             val needInternet = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
             if (needInternet.isNotEmpty()) loadWeather(needInternet)

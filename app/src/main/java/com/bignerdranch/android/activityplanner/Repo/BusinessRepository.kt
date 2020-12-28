@@ -55,8 +55,8 @@ object BusinessRepository {
     }
 
     suspend fun insert(business: List<Business>) {
-        businessDao.insert(*business.toTypedArray())
         insertWithCategories(business)
+        businessDao.insert(*business.toTypedArray())
     }
 
     suspend fun deleteAll() {
