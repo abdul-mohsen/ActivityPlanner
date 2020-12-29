@@ -1,17 +1,23 @@
 package com.bignerdranch.android.activityplanner.Repo
 
+import android.text.format.DateFormat
+import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.APIs.WebClient
 import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
 import com.bignerdranch.android.activityplanner.database.BusinessWeathersDao
 import com.bignerdranch.android.activityplanner.database.WeatherDao
 import com.bignerdranch.android.activityplanner.model.Business
+import com.bignerdranch.android.activityplanner.model.DataState
 import com.bignerdranch.android.activityplanner.model.Weather
+import com.bignerdranch.android.activityplanner.ui.home.HomeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.lang.Exception
+import java.util.*
 
 object WeatherRepository {
     private val webClient = WebClient.weatherAPI
@@ -19,11 +25,28 @@ object WeatherRepository {
     lateinit var weatherDao:  WeatherDao
     lateinit var businessWeatherDao: BusinessWeathersDao
 
-    suspend fun allWeatherByBusinessIdAndDate(ids: List<String>, date: String) =
-        weatherDao.getByBusinessIdAndDate(
-            ids,
-            date
-        )
+    fun allWeatherByBusinessIdAndDate(businesses: List<Business>, fullDate: String, date: String) = flow {
+        var firstIn = true
+        weatherDao.getByBusinessIdAndDate(businesses.map { it.id }, fullDate).collect { list ->
+            emit(list)
+            if (firstIn) {
+                val businessesNeedInternet = businesses.filter { business -> business.id !in list.map { it.businessId } }
+
+                if (businessesNeedInternet.isNotEmpty()) {
+                    loadWeather(businessesNeedInternet, date)
+                    firstIn = false
+                }
+            }
+        }
+    }
+
+
+    @FlowPreview
+    private suspend fun loadWeather(businesses: List<Business>, date: String) {
+        getWeather(businesses, date).collect{ list ->
+            if (list.isNotEmpty()) weatherDao.insert(*list.toTypedArray())
+        }
+    }
     
     @FlowPreview
     suspend fun getWeather(
@@ -37,7 +60,6 @@ object WeatherRepository {
                 ).toList().also { list ->
                     list.map { weather -> weather.businessId = business.id }
                     Timber.d("This is from the internet")
-                    weatherDao.insert(*list.toTypedArray())
                 }
             Timber.d("Got a response with a list of size ${weatherList.size}")
             emit(weatherList)

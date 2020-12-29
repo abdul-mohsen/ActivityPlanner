@@ -138,8 +138,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
     private fun observeBusinessList() {
         lifecycle.coroutineScope.launchWhenStarted {
             homeViewModel.businessList.collect { list ->
-                homeViewModel.updateDate(list.toMutableList())
-
+                Timber.d("I have been called")
+                businessAdapter.submitList(homeViewModel.businessList.value)
                 featureList = list.map { Feature.fromGeometry(
                     Point.fromLngLat(it.coordinates.longitude, it.coordinates.latitude)
                 ) }
@@ -181,6 +181,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback {
                     }
                     DataState.NoWeatherData -> {
                         Toast.makeText(requireContext(), "No weather data found", Toast.LENGTH_SHORT).show()
+                        businessAdapter.notifyDataSetChanged()
                         homeViewModel.updateDataState(DataState.Idle)
                     }
                     DataState.Updating -> {

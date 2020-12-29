@@ -7,17 +7,15 @@ import androidx.room.Insert
 import androidx.room.Delete
 import androidx.room.OnConflictStrategy
 import com.bignerdranch.android.activityplanner.model.Weather
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WeatherDao {
     @Query("SELECT * FROM weather_table")
     suspend fun getAll(): List<Weather>
 
-//    @Query("SELECT * FROM weather_table WHERE weatherId IN (:ids)")
-//    suspend fun getById( ids: List<Long>): List<Weather>
-
     @Query("SELECT * FROM weather_table WHERE businessId IN (:ids) AND time = (:date)")
-    suspend fun getByBusinessIdAndDate(ids: List<String>, date: String): List<Weather>
+    fun getByBusinessIdAndDate(ids: List<String>, date: String): Flow<List<Weather>>
 
     @Update
     suspend fun update(vararg weather: Weather)

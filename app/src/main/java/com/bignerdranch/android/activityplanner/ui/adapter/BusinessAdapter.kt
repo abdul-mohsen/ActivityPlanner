@@ -32,26 +32,26 @@ class BusinessAdapter: ListAdapter<Business, BusinessAdapter.AutoFillViewHolder>
         holder.bind(
             item.name,
             item.imageUrl,
-            item.weather?.tempC.toString(),
+            item.weather?.tempC  ,
             "(${item.reviewCount})",
             ratingToResourceId(item.rating),
             "https:${item.weather?.condition?.icon}",
             categories,
             item.price,
-            item.weather?.condition?.text.toString()
+            item.weather?.condition?.text
         )
     }
 
     inner class AutoFillViewHolder(private val bindingHolder: BusinessItemBinding):
         RecyclerView.ViewHolder(bindingHolder.root) {
 
-        fun bind(name: String, url: String, temp: String, reviewCount: String, imageResource: Int, weatherUrl: String, categories: String, price: String, condition: String) {
+        fun bind(name: String, url: String, temp: Float?, reviewCount: String, imageResource: Int, weatherUrl: String, categories: String, price: String, condition: String?) {
             bindingHolder.businessName.text = name.replace("\\s+".toRegex(), " ")
-            bindingHolder.weatherTemp.text = "${temp}°C"
+            bindingHolder.weatherTemp.text = "${temp?:"?.?"}°C"
             bindingHolder.reviewCount.text = reviewCount
             bindingHolder.categoryList.text = categories
             bindingHolder.price.text = price
-            bindingHolder.condition.text = condition
+            bindingHolder.condition.text = condition?: ""
             Picasso.get().load(weatherUrl)
                 .fit()
                 .centerInside()

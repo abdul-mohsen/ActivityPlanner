@@ -53,52 +53,31 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    @FlowPreview
-    private fun loadNewData(term: String = "", latLom: LatLng){
-        viewModelScope.launch(ioDispatcher) {
-            val tempBusinessList = mutableListOf<Business>()
-            BusinessRepository.getBusinesses(
-                term = term,
-                latitude = latLom.latitude,
-                longitude = latLom.longitude,
-                pageCount = 4
-            ).collect { list ->
-                tempBusinessList.addAll(list)
-            }
-            if (tempBusinessList.isEmpty() ) {
-                updateDataState(DataState.NoBusinessMatch)
-            } else {
-                Timber.d("A new list have been loaded $tempBusinessList")
-                BusinessRepository.insert(tempBusinessList)
-            }
-        }
-    }
-
-    @FlowPreview
-    private suspend fun loadWeather(list: List<Business>) {
-        weatherJob?.cancel()
-        var counter = 3
-        weatherJob = viewModelScope.launch(ioDispatcher) {
-            Timber.d("$list")
-            WeatherRepository.getWeather(list, shortDate).collect{ list ->
-                try {
-                    Timber.d("  ${list.first().businessId }  ${ _businessList.value.map {it.id}}")
-                    _businessList.value.first { it.id == list.first().businessId }
-                        .weather = list.first { it.time == fullDate }
-                    Timber.d("new Weather data")
-                    if (counter > 0 ){
-                        counter--
-                        _dataState.emit(DataState.NewWeatherData)
-                    } else
-                        _dataState.emit(DataState.NewBusinessData)
-                } catch (e: Exception) {
-                    Timber.d(e)
-                }
-            }
-            if (counter == 3) updateDataState(DataState.NoWeatherData)
-            else updateDataState(DataState.NewWeatherData)
-        }
-    }
+//    @FlowPreview
+//    private suspend fun loadWeather(list: List<Business>) {
+//        weatherJob?.cancel()
+//        var counter = 3
+//        weatherJob = viewModelScope.launch(ioDispatcher) {
+//            Timber.d("$list")
+//            WeatherRepository.getWeather(list, shortDate).collect{ list ->
+//                try {
+//                    Timber.d("  ${list.first().businessId }  ${ _businessList.value.map {it.id}}")
+//                    _businessList.value.first { it.id == list.first().businessId }
+//                        .weather = list.first { it.time == fullDate }
+//                    Timber.d("new Weather data")
+//                    if (counter > 0 ){
+//                        counter--
+//                        _dataState.emit(DataState.NewWeatherData)
+//                    } else
+//                        _dataState.emit(DataState.NewBusinessData)
+//                } catch (e: Exception) {
+//                    Timber.d(e)
+//                }
+//            }
+//            if (counter == 3) updateDataState(DataState.NoWeatherData)
+//            else updateDataState(DataState.NewWeatherData)
+//        }
+//    }
 
     @FlowPreview
     fun autoComplete(query: String) {
@@ -154,17 +133,10 @@ class HomeViewModel : ViewModel() {
             updateDataState(DataState.Updating)
             delay(500)
             BusinessRepository.allBusinessByLatLon(latLng.latitude, latLng.longitude).collect { list ->
-                Timber.d("New call for data")
                 if (list.isEmpty()) {
-                    Timber.d("Going to the internet")
-                    loadNewData(latLom = latLng)
+                    updateDataState(DataState.NoBusinessMatch)
                 } else {
                     location = latLng
-                    val listBusinessWithCategories = BusinessRepository.getFullBusinessInfo(list.map { it.id })
-                    listBusinessWithCategories.forEach { businessWithCategories ->
-                        list.first { it.id == businessWithCategories.business.id }
-                            .categories = businessWithCategories.categories
-                    }
                     updateDate(list.toMutableList())
                 }
             }
@@ -185,24 +157,24 @@ class HomeViewModel : ViewModel() {
         if (businesses.size == 0) return
         onDateChangeJob?.cancel()
         onDateChangeJob = viewModelScope.launch(cpuDispatcher) {
-            updateDataState(DataState.Updating)
             _selectedDate.emit(date)
-            val fullDate = DateFormat.format(FULL_DATE_FORMAT ,date).toString()
-            val oldWeatherList = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
-            val ids = oldWeatherList.map { it.id }
-            Timber.d("$ids , $date")
-            val sqlWeatherList = WeatherRepository.allWeatherByBusinessIdAndDate(ids, fullDate)
-            Timber.d("$sqlWeatherList")
-            sqlWeatherList.forEach { weather ->
-                businesses.first { business ->
-                    business.id == weather.businessId
-                }.weather = weather
+            WeatherRepository.allWeatherByBusinessIdAndDate(businesses = businesses, fullDate, shortDate).collect { list ->
+                updateDataState(DataState.Updating)
+                Timber.d("allWeatherByBusinessIdAndDate")
+                if (list.isEmpty()) {
+                    updateDataState(DataState.NoWeatherData)
+                    _businessList.value.forEach { it.weather = null }
+                }
+                else {
+                    updateDataState(targetState)
+                    list.forEach { weather ->
+                        businesses.first { business ->
+                            business.id == weather.businessId
+                        }.weather = weather
+                    }
+                    _businessList.emit(businesses)
+                }
             }
-            if (sqlWeatherList.isNotEmpty()) updateDataState(targetState)
-            _businessList.emit(businesses)
-
-            val needInternet = businesses.filter { it.weather == null || it.weather!!.time != fullDate }
-            if (needInternet.isNotEmpty()) loadWeather(needInternet)
         }
     }
 

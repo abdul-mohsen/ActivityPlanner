@@ -1,10 +1,12 @@
 package com.bignerdranch.android.activityplanner.Repo
 
+import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.APIs.WebClient
 import com.bignerdranch.android.activityplanner.database.BusinessDao
 import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
 import com.bignerdranch.android.activityplanner.database.CategoryDao
 import com.bignerdranch.android.activityplanner.model.*
+import com.mapbox.mapboxsdk.geometry.LatLng
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
@@ -21,8 +23,39 @@ object BusinessRepository {
 
     val allBusiness: Flow<List<Business>> by lazy { businessDao.getAll() }
 
-    fun allBusinessByLatLon(latitude: Double, longitude: Double) =
-        businessDao.getAllByDistance(latitude, longitude, cal(latitude))
+    fun allBusinessByLatLon(latitude: Double, longitude: Double) = flow{
+        businessDao.getAllByDistance(latitude, longitude, cal(latitude)).collect { list ->
+            Timber.d("New call for data")
+            if (list.isEmpty()){
+                if (loadNewData(latitude = latitude, longitude = longitude)) emit(emptyList<Business>())
+            } else {
+                val listBusinessWithCategories = getFullBusinessInfo(list.map { it.id })
+                listBusinessWithCategories.forEach { businessWithCategories ->
+                list.first { it.id == businessWithCategories.business.id }
+                        .categories = businessWithCategories.categories
+                }
+                emit(list)
+            }
+        }
+    }
+
+    @FlowPreview
+    private suspend fun loadNewData(term: String = "", latitude: Double, longitude: Double): Boolean{
+        val tempBusinessList = mutableListOf<Business>()
+        getBusinesses(
+                term = term,
+                latitude = latitude,
+                longitude = longitude,
+                pageCount = 4
+        ).collect { list ->
+            tempBusinessList.addAll(list)
+        }
+        return if (tempBusinessList.isEmpty() ) true else {
+            Timber.d("A new list have been loaded $tempBusinessList")
+            insert(tempBusinessList)
+            false
+        }
+    }
 
     private fun cal(lat: Double): Double = cos(Math.toRadians(lat)).pow(2)
 
