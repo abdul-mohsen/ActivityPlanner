@@ -20,11 +20,12 @@
         <ImageView
             android:id="@+id/business_image"
             android:layout_width="0dp"
-            android:layout_height="128dp"
+            android:layout_height="0dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:contentDescription="@string/business_image" />
+            android:contentDescription="@string/business_image"
+            app:layout_constraintHeight_percent=".50"/>
 
         <LinearLayout
             android:layout_marginTop="8dp"
@@ -53,40 +54,17 @@
                 android:layout_marginEnd="8dp"/>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/category_list"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textStyle="italic"
-            app:layout_constraintTop_toBottomOf="@+id/business_image"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="8dp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            tools:text="hellodddddddddddddddddddddddddddddddd" />
-
-        <TextView
-            android:id="@+id/condition"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/category_list"
-            android:maxLines="1"
-            android:layout_marginStart="8dp"
-            android:ellipsize="end"
-            tools:text="helpddddddddddddddddddddddddddddd"/>
-
         <LinearLayout
             android:id="@+id/color_layout"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:orientation="horizontal"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/category_list"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            android:background="@color/purple_500"
+            android:background="?attr/colorPrimary"
             android:alpha=".8"
-            app:layout_constraintTop_toBottomOf="@id/condition"
+            app:layout_constraintTop_toBottomOf="@id/business_image"
             android:padding="2dp"/>
 
         <TextView
@@ -105,11 +83,13 @@
             android:textSize="18sp" />
 
         <LinearLayout
+            android:id="@+id/rate_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/business_name"
-            android:layout_margin="8dp">
+            android:padding="8dp">
 
             <ImageView
                 android:id="@+id/rate_image"
@@ -117,7 +97,7 @@
                 android:layout_height="wrap_content"
                 android:scaleType="centerCrop"
                 android:src="@drawable/stars_regular_1"
-                android:layout_gravity="bottom"/>
+                android:layout_gravity="center"/>
 
             <TextView
                 android:id="@+id/review_count"
@@ -141,13 +121,36 @@
 
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/category_list"
+            app:layout_constraintTop_toBottomOf="@id/rate_layout"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="italic"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="hellodddddddddddddddddddddddddddddddd" />
+
+        <TextView
+            android:id="@+id/condition"
+            app:layout_constraintTop_toBottomOf="@id/category_list"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="helpddddddddddddddddddddddddddddd"/>
+
         <com.google.android.material.chip.Chip
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/add"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/category_list"
+            app:layout_constraintBottom_toTopOf="@id/business_name"
             android:layout_marginLeft="8dp"
             android:layout_marginRight="8dp"
             android:layout_marginBottom="8dp"/>

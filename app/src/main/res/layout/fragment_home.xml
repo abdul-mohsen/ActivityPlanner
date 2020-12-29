@@ -33,30 +33,34 @@
         android:indeterminate="true"
         android:visibility="gone"/>
 
-<!--    <androidx.constraintlayout.widget.Guideline-->
-<!--        android:layout_width=""-->
-<!--        android:layout_height=""/>-->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/recycler_view_guid_line"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent=".66"/>
+
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/grid"
-        android:layout_width="wrap_content"
-        android:layout_height="256dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:listitem="@layout/business_item"
-        />
+        app:layout_constraintTop_toTopOf="@id/recycler_view_guid_line"
+        tools:listitem="@layout/business_item"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:contentDescription="TODO"
+        android:contentDescription="@string/time_option"
         android:src="@drawable/ic_clock"
         app:layout_constraintBottom_toTopOf="@id/grid"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <LinearLayout
         android:id="@+id/layout_slider"
@@ -64,7 +68,8 @@
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toTopOf="@id/grid"
         app:layout_constraintEnd_toStartOf="@id/button"
-        android:visibility="gone">
+        android:visibility="gone"
+        android:animateLayoutChanges="true">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/time_text"
