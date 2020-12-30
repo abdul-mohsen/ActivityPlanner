@@ -1,25 +1,24 @@
 package com.bignerdranch.android.activityplanner.Repo
 
-import androidx.lifecycle.viewModelScope
 import com.bignerdranch.android.activityplanner.APIs.WebClient
-import com.bignerdranch.android.activityplanner.database.BusinessDao
 import com.bignerdranch.android.activityplanner.database.BusinessCategoriesDao
+import com.bignerdranch.android.activityplanner.database.BusinessDao
 import com.bignerdranch.android.activityplanner.database.CategoryDao
 import com.bignerdranch.android.activityplanner.model.*
-import com.mapbox.mapboxsdk.geometry.LatLng
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
-import java.lang.Exception
 import kotlin.math.cos
 import kotlin.math.pow
 
 object BusinessRepository {
-    private val webClient = WebClient.yelpAPI
+    var webClient = WebClient.yelpAPI
     lateinit var businessDao: BusinessDao
     lateinit var categoryDao: CategoryDao
     lateinit var businessCategoriesDao: BusinessCategoriesDao
-    private val dispatcher = Dispatchers.IO
+    var dispatcher = Dispatchers.IO
 
     val allBusiness: Flow<List<Business>> by lazy { businessDao.getAll() }
 
@@ -126,12 +125,12 @@ object BusinessRepository {
     }.flowOn(dispatcher)
 
     @FlowPreview
-    suspend fun autoComplete(
+    suspend fun getAutoComplete(
         text: String,
         latitude: Double,
         longitude: Double,
     ): Flow<AutoComplete> = flow {
-        val autoComplete = webClient.autoComplete(
+        val autoComplete = webClient.getAutoComplete(
             text = text,
             latitude = latitude,
             longitude = longitude
@@ -142,5 +141,4 @@ object BusinessRepository {
     }.catch { e ->
         Timber.d(e.toString())
     }.flowOn(dispatcher)
-
 }

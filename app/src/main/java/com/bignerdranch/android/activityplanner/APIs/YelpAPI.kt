@@ -24,7 +24,7 @@ interface YelpAPI {
     ): Array<Business>
 
     @GET("autocomplete")
-    suspend fun autoComplete(
+    suspend fun getAutoComplete(
         @Query("text") text: String,
         @Query("latitude") latitude: Double = newYorkLocation.latitude,
         @Query("longitude") longitude: Double = newYorkLocation.longitude,
